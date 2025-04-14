@@ -121,6 +121,8 @@ class isoTPS:
         data["yb_obtions"] = self.yb_options
         data["tebd_options"] = self.tebd_options
         data["ordering_mode"] = self.ordering_mode
+        data["perform_variational_column_optimization"] = self.perform_variational_column_optimization
+        data["variational_column_optimization_options"] = self.variational_column_optimization_options
         data["debug_logger_options"] = self.debug_logger_options
         data["Ts"] = {}
         for i, T in enumerate(self.Ts):
@@ -156,6 +158,8 @@ class isoTPS:
         self.yb_options = data["yb_obtions"]
         self.tebd_options = data["tebd_options"]
         self.ordering_mode = data["ordering_mode"]
+        self.perform_variational_column_optimization = data["perform_variational_column_optimization"]
+        self.variational_column_optimization_options = data["variational_column_optimization_options"]
         self.debug_logger = debug_logging.DebugLogger(data["debug_logger_options"])
         self.Ts = [None] * self.Lx * self.Ly * 2
         for i in range(self.Lx * self.Ly * 2):
