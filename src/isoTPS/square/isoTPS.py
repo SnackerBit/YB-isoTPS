@@ -43,7 +43,10 @@ class isoTPS_Square(isoTPS.isoTPS):
         # Temporarily set debug level to zero to avoid collecting unnecessary debug information during initialization
         temp_debug_logger = self.debug_logger
         self.debug_logger = debug_logging.DebugLogger()
-        def _initialize_T_product_state(state=np.array([1.0, 0.0], dtype=np.complex128)):
+        def _initialize_T_product_state(state=None, dtype=np.complex128):
+            if state is None:
+                state = np.zeros((self.d), dtype=np.complex128)
+                state[0] = 1.0
             T = np.zeros((state.size, 1, 1, 1, 1), dtype=np.complex128)
             T[:, 0, 0, 0, 0] = state[:]
             return T
