@@ -92,8 +92,6 @@ class isoTPS_Square(isoTPS.isoTPS):
         if ax is None:
             fig, ax = plt.subplots(figsize=(4 * self.Lx * scale, 4 * self.Ly * scale))
         ax.axis("equal")
-        ax.set_xlim(-1, 2 * self.Lx)
-        ax.set_ylim(-1, 2 * self.Ly)
         ax.get_xaxis().set_visible(False)
         ax.get_yaxis().set_visible(False)
 

@@ -146,8 +146,8 @@ class isoTPS_Honeycomb(isoTPS.isoTPS):
         if ax is None:
             fig, ax = plt.subplots(figsize=(2 * np.sqrt(3) * self.Lx * scale, 6 * self.Ly * scale))
         ax.axis("equal")
-        ax.set_xlim(-1, np.sqrt(3) * (self.Lx - 1 + 1/3) + 1)
-        ax.set_ylim(-1, 2 * (self.Ly - 1) + (self.Lx - 1) + 1.5)
+        #ax.set_xlim(-1, np.sqrt(3) * (self.Lx - 1 + 1/3) + 1)
+        #ax.set_ylim(-1, 2 * (self.Ly - 1) + (self.Lx - 1) + 1.5)
         ax.get_xaxis().set_visible(False)
         ax.get_yaxis().set_visible(False)
 
