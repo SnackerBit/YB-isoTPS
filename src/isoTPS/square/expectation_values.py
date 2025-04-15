@@ -5,7 +5,7 @@ This file implements the computation of norms and expectation values for one-sit
 """
 
 def compute_norm_onesite(T, W, Wp1):
-    """
+    r"""
     Computes the norm of the one-site wave function
 
           | /  
@@ -53,7 +53,7 @@ def compute_norm_onesite(T, W, Wp1):
     return contr.item()
 
 def compute_norm_twosite(T1, T2, Wm1, W, Wp1):
-    """
+    r"""
     Computes the norm of the two-site wave function
 
         \ | 
@@ -131,7 +131,7 @@ def compute_norm_twosite(T1, T2, Wm1, W, Wp1):
     return contr.item()
 
 def expectation_value_onesite(T, Wm1, W, op):
-    """
+    r"""
     Computes the expectation value of the given one-site
     operator on the wave function
 
@@ -184,7 +184,7 @@ def expectation_value_onesite(T, Wm1, W, op):
     return np.tensordot(contr, op, ([0, 1], [1, 0])) / np.trace(contr) # [p] [p*]; [i] [i*]
 
 def expectation_value_twosite(T1, T2, Wm1, W, Wp1, op):
-    """
+    r"""
     Computes the expectation value of the given two-site
     operator on the wave function
 

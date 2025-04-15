@@ -7,7 +7,7 @@ The following functions thus all carry either the subscript 1 or 2.
 """
 
 def compute_norm_onesite_1(T, W, Wp1):
-    """
+    r"""
     Computes the norm of the one-site wave function
 
              | /  
@@ -55,7 +55,7 @@ def compute_norm_onesite_1(T, W, Wp1):
     return np.sqrt(contr.item())
 
 def compute_norm_onesite_2(T, W):
-    """
+    r"""
     Computes the norm of the one-site wave function
 
             \          
@@ -85,7 +85,7 @@ def compute_norm_onesite_2(T, W):
     return np.sqrt(contr.item())
 
 def compute_norm_twosite(T1, T2, Wm1, W, Wp1):
-    """
+    r"""
     Computes the norm of the two-site wave function
 
                     \ | 
@@ -165,7 +165,7 @@ def compute_norm_twosite(T1, T2, Wm1, W, Wp1):
     return np.sqrt(contr.item())
 
 def expectation_value_onesite_1(T, W, Wp1, op):
-    """
+    r"""
     Computes the norm of the one-site wave function
 
              | /  
@@ -216,7 +216,7 @@ def expectation_value_onesite_1(T, W, Wp1, op):
     return np.tensordot(contr, op, ([0, 1], [1, 0])) / np.trace(contr) # [i] [i*]; [i] [i*]
 
 def expectation_value_onesite_2(T, W, op):
-    """
+    r"""
     Computes the norm of the one-site wave function
 
             \          
@@ -249,7 +249,7 @@ def expectation_value_onesite_2(T, W, op):
     return np.tensordot(contr, op, ([0, 1], [1, 0])) / np.trace(contr) # [i] [i*]; [i] [i*]
 
 def expectation_value_twosite_1(T1, T2, Wm1, W, Wp1, op):
-    """
+    r"""
     Computes the expectation value of the given operator with respect to the two-site wave function
 
                     \ |                 
@@ -333,7 +333,7 @@ def expectation_value_twosite_1(T1, T2, Wm1, W, Wp1, op):
     return result / np.trace(contr.reshape(i1*j1, i2*j2))
 
 def expectation_value_twosite_2(T1, T2, W, op):
-    """
+    r"""
     Computes the expectation value of the given operator wrt the the two-site wave function
 
                          

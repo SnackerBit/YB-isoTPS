@@ -44,7 +44,7 @@ def safe_svd(A, full_matrices=True):
         return U, S, V
 
 def split_and_truncate(A, chi_max=0, eps=0):
-    """
+    r"""
     Performs an SVD of the matrix A and truncates the singular values to the bond dimension chi_max.
 
     Parameters
@@ -130,7 +130,7 @@ def random_unitary(N):
     return unitary_group.rvs(N)
 
 def check_isometry(A):
-    """
+    r"""
     Cecks if the given matrix A of shape (in, out) is in fact an isometry, ie. if
     A^\dagger A = 1 and if P = A A^\dagger is a projector, ie. P^2 = P.
     Returns True on success and False on failure.
@@ -173,7 +173,7 @@ def flip_W(W):
     return np.transpose(W, (2, 1, 0, 3)) # l, u, r, d <-> r, u, l, d
 
 def flip_T_square(T):
-    """
+    r"""
     Flips the given T tensor (square isoTPS) along the vertical axis
 
      lu     ru          ru     lu     
@@ -199,7 +199,7 @@ def flip_T_square(T):
     return np.transpose(T, (0, 4, 3, 2, 1)) # p, ru, rd, ld, lu <-> p, lu, ld, rd, ru
 
 def flip_T_honeycomb(T):
-    """
+    r"""
     Flips the given T tensor (honeycomb isoTPS) along the vertical axis
 
          p  ru           ru  p           lu  p                   
@@ -327,7 +327,7 @@ def split_dims(chi, D_max):
     return best_D1, best_D2
 
 def split_matrix_svd(A, chi):
-    """
+    r"""
     Splits a (n x m) matrix A into a (n x chi) isometry B and a (chi x m) matrix C,
     using Singular Value Decomposition. This function asssumes chi <= max(n, m).
     If chi >= min(n, m), the decomposition is numerically exact and the QR decomposition is used, 
@@ -369,7 +369,7 @@ def split_matrix_svd(A, chi):
     return B, C
 
 def split_matrix_iterate_QR(A, chi, N_iters, eps=1e-9, C0=None, smart_initial_condition=True, normalize=True, log_iterates=False):
-    """
+    r"""
     Splits a (n x m) matrix A into a (n x chi) isometry B and a (chi x m) matrix C,
     using N_iters iterations of a sweeping algorithm using only QR decompositions and matrix products.
     Per iteration 2 QR decompositions and 2 matrix products are computed.
@@ -468,7 +468,7 @@ def split_matrix_iterate_QR(A, chi, N_iters, eps=1e-9, C0=None, smart_initial_co
         return B, C, n + 1, iterates
 
 def split_matrix(A, chi, mode, N_iters=None):
-    """
+    r"""
     Splits a (n x m) matrix A into a (n x chi) isometry B and a (chi x m) matrix C.
     Depending on the selected mode, either the function split_matrix_svd() or
     split_matrix_iterate_QR() is called for the splitting.

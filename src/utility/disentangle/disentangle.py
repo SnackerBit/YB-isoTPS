@@ -76,7 +76,7 @@ def initialize_disentangle(theta, init_U="polar", N_iters_pre_disentangler=200):
     return U0, theta
 
 def disentangle(theta, mode="renyi", init_U="polar", N_iters_pre_disentangler=200, chi=None, debug_logger=debug_logging.DebugLogger(), **kwargs):
-    """
+    r"""
     Disentangles a given wavefunction tensor theta by optimizing over the unitary U:
     
             ___________                               ___________                                                                                 
@@ -84,7 +84,7 @@ def disentangle(theta, mode="renyi", init_U="polar", N_iters_pre_disentangler=20
     ml ----|   theta   |---- mR       =       ml ----|   theta   |---- mR                                                                      
            |___________|                             |___________|                                                                                                            
              |       |                                _|_______|_                                                                                                                 
-             |       |                               |_U^\\dagger|                                                                                    
+             |       |                               |_U^\dagger |                                                                                    
              d1      d2                               _|_______|_   
                                                      |_____U_____|
                                                        |       |           

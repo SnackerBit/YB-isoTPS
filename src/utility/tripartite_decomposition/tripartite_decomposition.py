@@ -7,7 +7,7 @@ from . import tripartite_decomposition_loop
 from .. import debug_logging
 
 def tripartite_decomposition(T, D1, D2, chi, mode="svd", debug_logger=debug_logging.DebugLogger(), **kwargs):
-    """
+    r"""
     Computes the tripartite decomposition of tensor T:
 
                                               chi_3 /

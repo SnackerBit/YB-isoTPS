@@ -56,7 +56,7 @@ class variationalColumnOptimizer:
 
     @staticmethod
     def contract_theta(W1, W2, T):
-        """
+        r"""
         Contracts W1, W2 and T into a single tensor at a cost of O(chi^3D^4 + chi^2D^6d) = O(D^8)
 
             \ |      
@@ -112,7 +112,7 @@ class variationalColumnOptimizer:
         self.W1W2s[i] = np.conj(np.tensordot(self.Ws[2*i], self.Ws[2*i+1], ([1], [3]))) # l1 [u1] r1 d1; l2 u2 r2 [d2] -> l1 r1 d1 l2 u2 r2
         
     def contract_bottom_environment(self, i):
-        """
+        r"""
         Computes the next bottom environment E' as
 
                                  _|_      |  
@@ -155,7 +155,7 @@ class variationalColumnOptimizer:
             self.Es_bot[i+1] = contr
 
     def contract_top_environment(self, i):
-        """
+        r"""
         Computes the top next environment E' as
 
                                  ___________ 

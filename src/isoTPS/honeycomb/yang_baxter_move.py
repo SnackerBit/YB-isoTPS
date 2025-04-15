@@ -4,7 +4,7 @@ from ...utility.tripartite_decomposition import tripartite_decomposition
 from ...utility import debug_logging
 
 def yang_baxter_move_1(W1, W2, T, D_max, debug_dict=None):
-    """
+    r"""
     Performs the first of two variants of the Yang-Baxter move necessary for the honeycomb lattice.
 
     \   |                          \           |     
@@ -75,7 +75,7 @@ def yang_baxter_move_1(W1, W2, T, D_max, debug_dict=None):
     return W, T, error
 
 def yang_baxter_move_2(W, T, D_max, chi_max, mode="both", larger_bond_direction="down", options={"mode": "svd"}, debug_dict=None):
-    """
+    r"""
     Performs the second of two variants of the Yang-Baxter move necessary for the honeycomb lattice.
 
          |           /                       |  /   

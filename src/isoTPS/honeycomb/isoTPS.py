@@ -759,7 +759,7 @@ class isoTPS_Honeycomb(isoTPS.isoTPS):
             utility.append_to_dict_list(self.debug_dict, "column_errors_yb", column_error)
 
     def get_environment_twosite(self):
-        """
+        r"""
         Returns the environment around the current ortho center,
         consisting of the tensors T1, T2, Wm1, W, Wp1.
         They are already flipped such that they satisfy one of the following two structures:
@@ -868,7 +868,7 @@ class isoTPS_Honeycomb(isoTPS.isoTPS):
         self.Ws[self.ortho_center] = W
 
     def get_environment_onesite(self, left_environment=True):
-        """
+        r"""
         Returns the one-site environment next to the current ortho center.
         Either returns the left or the right environment. Depending on the position of
         the ortho surface, the returned tensors can have two structures.

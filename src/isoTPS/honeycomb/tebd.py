@@ -86,7 +86,7 @@ def _compute_error_1(T1, T2, W, T1_prime, T2_prime, W_prime, U):
     return error
 
 def tebd_step_1(T1, T2, W, U, mode="svd", log_error=False, **kwargs):
-    """
+    r"""
     Performs a single TEBD step by approximating the updated tensors of the two site wavefunction, after the time evolution operator
     U has been applied. the bond dimension of all tensors is kept the same.
 

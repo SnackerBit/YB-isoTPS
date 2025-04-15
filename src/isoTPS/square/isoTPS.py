@@ -607,11 +607,11 @@ class isoTPS_Square(isoTPS.isoTPS):
                 self.debug_logger.append_to_log_list("column_errors_yb_before_variational_optimization", optimizer.compute_error())
 
     def get_environment_twosite(self):
-        """
+        r"""
         Returns the environment around the current ortho center,
         consisting of the tensors T1, T2, Wm1, W, Wp1.
         Tensors are flipped such that they satisfy the following structure:
-
+        
                     \ | 
                      \|
                      Wp1
@@ -741,7 +741,7 @@ class isoTPS_Square(isoTPS.isoTPS):
             self.Ws[self.ortho_center + 1] = Wp1
 
     def get_environment_onesite(self, left_environment=True):
-        """
+        r"""
         Returns the one-site environment next to the current ortho center.
         Either returns the left or the right environment.
 

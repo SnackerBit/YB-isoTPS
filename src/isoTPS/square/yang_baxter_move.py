@@ -4,7 +4,7 @@ from ...utility.tripartite_decomposition import tripartite_decomposition
 from ...utility import debug_logging
 
 def yang_baxter_move(W1, W2, T, D_max, chi_max, larger_bond_direction="down", options={"mode": "svd"}, debug_logger=debug_logging.DebugLogger()):
-    """
+    r"""
     Performs the Yang baxter move
 
     \   |           /               \           |   /        
