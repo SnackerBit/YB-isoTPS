@@ -99,7 +99,7 @@ def perform_global_quench_run(tps_params, model_params, dt, N_steps, output_fold
         #E = np.sum(tps.copy().compute_expectation_values_twosite(H_bonds))
         #Es.append(E)
         append_to_log(f"Took {round(tebd_time, 3)} seconds.")#, energy = {E}.")
-        if tps.debug_logger.log_algorithm_walltimes and  "algorithm_walltimes" in tps.debug_logger.log_dict:
+        if tps.debug_logger.log_algorithm_walltimes and "algorithm_walltimes" in tps.debug_logger.log_dict:
             if "local_tebd_update" in tps.debug_logger.log_dict["algorithm_walltimes"]:
                 temp = tps.debug_logger.log_dict["algorithm_walltimes"]["local_tebd_update"][-1]
                 append_to_log(f"Total time TEBD: {temp}")
@@ -133,7 +133,7 @@ def compute_onsesite_expectation_values(N_steps, output_folder):
     sigma_x = tfi.TFI(0.0, 0.0).sigma_x
     sigma_y = tfi.TFI(0.0, 0.0).sigma_y
     sigma_z = tfi.TFI(0.0, 0.0).sigma_z
-    for n in range(N_steps):
+    for n in range(N_steps+1):
         append_to_log(f"Computing measurement for tps {n} ...")
         start = time.time()
         tps = isoTPS_Square.load_from_file(f"{output_folder}/tps_{n}.h5")

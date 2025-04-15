@@ -7,7 +7,7 @@ from ..isoTPS.square.isoTPS import isoTPS_Square
 from ..isoTPS.honeycomb.isoTPS import isoTPS_Honeycomb
 from ..models import tfi
 from ..utility import utility
-from ..utility import debug_levels
+from ..utility import debug_logging
 
 def perform_gs_search_run(tps_params, model_params, dtau_l, dtau_r, max_iters_TEBD=50, max_iters_gss=10, min_dtau_diff=1e-9, lattice="square", initialize="spinup", output_filename=None, checkpoints=False):
     """
@@ -116,13 +116,13 @@ def perform_gs_search_run(tps_params, model_params, dtau_l, dtau_r, max_iters_TE
     loaded = False
     if checkpoints: # Try to load checkpoint
         for n in range(max_iters_gss):
-            if os.path.isfile(output_filename + f"_checkpoint_n_gss_{n}_n_TEBD_{0}.h5"):
+            if os.path.isfile(output_filename + f"_checkpoint_n_gss_{n}_n_TEBD_{0}.h5") or os.path.isfile(output_filename + f"_checkpoint_n_gss_{n}_n_TEBD_{max_iters_TEBD}.h5"):
                 algorithm_data["n_start_gss"] = n
                 loaded = True
             else:
                 break
         if loaded:
-            for n in range(1, max_iters_TEBD):
+            for n in range(1, max_iters_TEBD+1):
                 temp_n_start_gss = algorithm_data["n_start_gss"]
                 if os.path.isfile(output_filename + f"_checkpoint_n_gss_{temp_n_start_gss}_n_TEBD_{n}.h5"):
                     algorithm_data["n_start_TEBD"] = n
@@ -146,7 +146,7 @@ def perform_gs_search_run(tps_params, model_params, dtau_l, dtau_r, max_iters_TE
             best_tps_data["tps"].initialize_spinup()
         elif initialize == "spinright":
             best_tps_data["tps"].initialize_spinright()
-        best_tps_data["tps"].reset_debug_dict()
+        best_tps_data["tps"].reset_time_counters()
         if checkpoints:
             append_to_log("Was not able to load checkpoint.")
 
@@ -168,18 +168,17 @@ def perform_gs_search_run(tps_params, model_params, dtau_l, dtau_r, max_iters_TE
         U_bonds = utility.calc_U_bonds(H_bonds, dtau/2)
         for n in range(algorithm_data["n_start_TEBD"], max_iters_TEBD):
             tps_prev = best_tps_data["tps"].copy()
-            best_tps_data["tps"].reset_debug_errors_and_times()
+            best_tps_data["tps"].reset_time_counters()
             append_to_log(f"Computing TEBD step {n + 1} with dtau = {dtau} ...")
             start_TEBD = time.time()
             best_tps_data["tps"].perform_TEBD2(U_bonds, 1)
             E_new = np.sum(best_tps_data["tps"].copy().compute_expectation_values_twosite(H_bonds))
             end_TEBD = time.time()
             append_to_log(f"Energy = {E_new}, took {round(end_TEBD-start_TEBD, 3)} seconds.")
-            if debug_levels.check_debug_level(best_tps_data["tps"].debug_dict, debug_levels.DebugLevel.LOG_PER_SITE_ERROR_AND_WALLTIME):
-                append_to_log(f"Total time YB: {np.sum(best_tps_data['tps'].debug_dict['times_yb'])}")
-                append_to_log(f"Total time TEBD: {np.sum(best_tps_data['tps'].debug_dict['times_tebd'])}")
-                append_to_log(f"Error density YB: {np.sum(best_tps_data['tps'].debug_dict['errors_yb']) / N}")
-                append_to_log(f"Error density TEBD: {np.sum(best_tps_data['tps'].debug_dict['errors_tebd']) / N}")
+            if best_tps_data["tps"].debug_logger.log_yb_move_walltimes:
+                append_to_log(f"Total time YB: {np.sum(best_tps_data['tps'].debug_logger.log_dict['yb_move_walltimes'])}")
+            if best_tps_data["tps"].debug_logger.log_local_tebd_update_walltimes:
+                append_to_log(f"Total time TEBD: {np.sum(best_tps_data['tps'].debug_logger.log_dict['local_tebd_update_walltimes'])}")
             if E_new > best_tps_data["E"]:
                 # energy increased -> terminate
                 best_tps_data["tps"] = tps_prev
@@ -188,7 +187,6 @@ def perform_gs_search_run(tps_params, model_params, dtau_l, dtau_r, max_iters_TE
             best_tps_data["E"] = E_new
             if checkpoints:
                 save_checkpoint(best_tps_data, n_gss, n, algorithm_data)
-
         append_to_log("[WARNING]: Reached end of TEBD steps. Consider increasing parameter max_iters_TEBD.")
         algorithm_data["n_start_TEBD"] = 0
         return best_tps_data["E"]
@@ -228,7 +226,8 @@ def perform_gs_search_run(tps_params, model_params, dtau_l, dtau_r, max_iters_TE
         intervals.append(temp)
         append_to_log(f"interval: {intervals[-1]}")
         energies.append((algorithm_data["energy_1"], algorithm_data["energy_2"]))
-        save_checkpoint(best_tps_data, n_gss, max_iters_TEBD, algorithm_data)
+        if checkpoints:
+            save_checkpoint(best_tps_data, n_gss, max_iters_TEBD, algorithm_data)
         if algorithm_data["delta"] <= min_dtau_diff:
             break
     end = time.time()
@@ -251,8 +250,8 @@ def perform_gs_search_run(tps_params, model_params, dtau_l, dtau_r, max_iters_TE
                 hf["final_dtau"] = algorithm_data["dtau_2"]
             hf["wall_time"] = end - start
             hf["done"][...] = True
-            if best_tps_data['tps'].debug_dict is not None:
-                best_tps_data['tps'].dump_debug_dict(hf)        
+            if best_tps_data['tps'].debug_logger is not None:
+                best_tps_data['tps'].debug_logger.save_to_file_h5(hf)        
 
 
 
