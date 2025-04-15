@@ -1,4 +1,3 @@
-import hdfdict
 import copy
 from . import utility
 
@@ -155,7 +154,7 @@ class DebugLogger:
         temp = {}
         temp["debug_log"] = copy.deepcopy(self.log_dict)
         utility.turn_lists_to_dicts(temp)
-        hdfdict.dump(temp, h5file)
+        utility.dump_dict_into_hf(h5file, temp)
 
     def load_log_dict(self, log_dict):
         """

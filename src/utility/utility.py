@@ -1,7 +1,6 @@
 import numpy as np
 import scipy
 import scipy.linalg
-import hdfdict
 
 """
 This file implements several utility functions that are used throughout the code base
@@ -632,37 +631,60 @@ def append_to_dict_list(d, key, value):
         else:
             d[key] = [value]
 
-def hdf_dict_to_python_dict(d):
+# TODO: hdf_dict_to_python_dict
+
+def dump_dict_into_hf(hf, d):
     """
-    Creates a python dictionary from a hdf dictionary loaded with hdfdict.load
+    dumps a dictionary into a hdf5 file.
 
     Parameters
     ----------
-    d : hdfdict
-        the hdfdict that we want to turn into a python dictionary
-    
+    hf : h5py.File
+        the hdf5 file
+    d : dict
+        the dictionary
+    """
+    allowed_types = [int, float, complex, bool, str, np.ndarray]
+    def _is_allowed_type(value):
+        for allowed_type in allowed_types:
+            if isinstance(value, allowed_type):
+                return True
+        return False
+    for key, value in d.items():
+        if _is_allowed_type(value):
+            write_or_change_field_hf(hf, key, value, overwrite=True)
+        elif isinstance(value, dict):
+            dump_dict_into_hf(hf.create_group(key), d[key])
+
+def load_dict_from_hf(hf):
+    """
+    Loads a python dictionary from a hdf5 file.
+
+    Parameters
+    ----------
+    hf : h5py.File
+        the hdf5 file
+
     Returns
     -------
     result : dict
-        resulting python dictionary
+        the resulting dictionary
     """
-    d = dict(d)
-    for key, value in d.items():
-        if isinstance(value, hdfdict.hdfdict.LazyHdfDict):
-            d[key] = hdf_dict_to_python_dict(value)
-        elif isinstance(value, bytes):
-            d[key] = value.decode()
-    return d
-
-def load_dict_from_file(filename):
-    return hdf_dict_to_python_dict(hdfdict.load(filename))
+    result = {}
+    for key, value in hf.items():
+        if isinstance(value, h5py.Group):
+            result[key] = load_dict_from_hf(hf[key])
+        else:
+            result[key] = hf[key][()]
+            if isinstance(result[key], bytes):
+                result[key] = result[key].decode('utf8')
+    return result
 
 def turn_lists_to_dicts(d):
     """
     Recursively loops through the contents of the given dictionary, turning all lists [element_1, element_2, ..., element_n] 
     into dictionaries {"1": element_1, "2": element_2, ..., "n": element_n} if element_1, element_2, ..., element_n are lists
-    or dicts themselves. This is used for storing lists of elements in 
-    h5-files using hdfdict.dump.
+    or dicts themselves. This is used for storing lists of elements in h5-files.
 
     Parameters
     ----------

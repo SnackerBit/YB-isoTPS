@@ -1,6 +1,5 @@
 
 import h5py
-import hdfdict
 import time
 import numpy as np
 import os
@@ -41,7 +40,7 @@ def perform_global_quench_run(tps_params, model_params, dt, N_steps, output_fold
             "initialize" : initialize,
             "load_checkpoint" : load_checkpoint,
         }
-        hdfdict.dump(parameters, hf)
+        utility.dump_dict_into_hf(hf, parameters)
         hf["done"] = False
         hf["success"] = False
     # Create log file

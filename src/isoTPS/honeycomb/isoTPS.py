@@ -1,7 +1,6 @@
 import numpy as np
 import time
 import matplotlib.pyplot as plt
-import hdfdict
 from ...utility import utility
 from ...utility import debug_logging
 from . import yang_baxter_move

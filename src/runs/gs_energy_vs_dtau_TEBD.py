@@ -5,7 +5,6 @@ from ..utility import utility
 from ..models import tfi
 import time
 import h5py
-import hdfdict
 import traceback
 
 def perform_gs_energy_vs_dtau_run(tps_params, model_params, dtaus, dtau_index, N_steps, tebd_order=2, lattice="square", initialize="spinup", L=None, model=tfi.TFI, output_filename=None):
@@ -92,7 +91,7 @@ def perform_gs_energy_vs_dtau_run(tps_params, model_params, dtaus, dtau_index, N
                 "output_filename" : output_filename,
                 "initialize" : initialize
             }
-            hdfdict.dump(parameters, hf)
+            utility.dump_dict_into_hf(hf, parameters)
             hf["done"] = False
             hf["success"] = False
         # Create log file

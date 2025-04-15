@@ -1,8 +1,8 @@
 import numpy as np
 from ..utility import debug_logging
+from ..utility import utility
 from . import shifting_ortho_center
 import h5py
-import hdfdict
 
 class isoTPS:
     """
@@ -133,9 +133,9 @@ class isoTPS:
         data["ortho_surface"] = self.ortho_surface
         data["ortho_center"] = self.ortho_center
         # Save to .h5 file
-        with h5py.File(filename, "w") as file:
-            hdfdict.dump(data, file)
-            self.debug_logger.save_to_file_h5(file)
+        with h5py.File(filename, "w") as hf:
+            utility.dump_dict_into_hf(hf, data)
+            self.debug_logger.save_to_file_h5(hf)
 
     def _load_from_dict(self, data, load_debug_log=True):
         """

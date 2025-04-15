@@ -1,6 +1,5 @@
 import numpy as np
 import h5py
-import hdfdict
 import os
 import time
 from ..isoTPS.square.isoTPS import isoTPS_Square
@@ -93,7 +92,7 @@ def perform_gs_search_run(tps_params, model_params, dtau_l, dtau_r, max_iters_TE
                 "output_filename" : output_filename,
                 "checkpoints": checkpoints
             }
-            hdfdict.dump(parameters, hf)
+            utility.dump_dict_into_hf(hf, parameters)
             hf["done"] = False
         # Create log file
         with open(output_filename + ".log", "w") as file:
@@ -130,9 +129,8 @@ def perform_gs_search_run(tps_params, model_params, dtau_l, dtau_r, max_iters_TE
             temp_n_start_gss = algorithm_data["n_start_gss"]
             temp_n_start_TEBD = algorithm_data["n_start_TEBD"]
             best_tps_data["tps"] = isoTPS_Square.load_from_file(output_filename + f"_checkpoint_tps_n_gss_{temp_n_start_gss}_n_TEBD_{temp_n_start_TEBD}.h5")
-            algorithm_data = hdfdict.load(output_filename + f"_checkpoint_n_gss_{temp_n_start_gss}_n_TEBD_{temp_n_start_TEBD}.h5")
-            algorithm_data.unlazy()
-            algorithm_data = utility.hdf_dict_to_python_dict(algorithm_data)
+            with h5py.File(output_filename + f"_checkpoint_n_gss_{temp_n_start_gss}_n_TEBD_{temp_n_start_TEBD}.h5", "r") as hf:
+                algorithm_data = utility.load_dict_from_hf(hf)            
             best_tps_data["E"] = algorithm_data["best_energy"]
             append_to_log(f"Loaded checkpoint from file \"output_filename_checkpoint_n_gss_{temp_n_start_gss}_n_TEBD_{temp_n_start_TEBD}.h5\"")
 
@@ -157,7 +155,7 @@ def perform_gs_search_run(tps_params, model_params, dtau_l, dtau_r, max_iters_TE
     def save_checkpoint(best_tps_data, n_gss, n_TEBD, algorithm_data):
         algorithm_data["best_energy"] = best_tps_data["E"]
         with h5py.File(output_filename + f"_checkpoint_n_gss_{n_gss}_n_TEBD_{n_TEBD}.h5", "w") as hf:
-            hdfdict.dump(algorithm_data, hf)
+            utility.dump_dict_into_hf(hf, algorithm_data)
         best_tps_data["tps"].save_to_file(output_filename + f"_checkpoint_tps_n_gss_{n_gss}_n_TEBD_{n_TEBD}.h5")
         append_to_log(f"Saved checkpoint to file \"{output_filename}_checkpoint_n_gss_{n_gss}_n_TEBD_{n_TEBD}.h5\"")
 
