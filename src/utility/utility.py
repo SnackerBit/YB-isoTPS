@@ -631,7 +631,18 @@ def append_to_dict_list(d, key, value):
         else:
             d[key] = [value]
 
-# TODO: hdf_dict_to_python_dict
+def write_or_change_field_hf(hf, name, value, overwrite=True):
+    """
+    Helper function for writing into an h5 file
+    """
+    try:
+        if name in hf:
+            if overwrite:
+                hf[name][...] = value
+        else:
+            hf[name] = value
+    except Exception as e:
+        print(f"Encountered exception while trying to write {name} to h5 file: {e}", flush=True)
 
 def dump_dict_into_hf(hf, d):
     """
