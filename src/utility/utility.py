@@ -1,4 +1,5 @@
 import numpy as np
+import h5py
 import scipy
 import scipy.linalg
 
@@ -689,6 +690,8 @@ def load_dict_from_hf(hf):
             result[key] = hf[key][()]
             if isinstance(result[key], bytes):
                 result[key] = result[key].decode('utf8')
+            if isinstance(result[key], str) and result[key] == 'null\n...\n':
+                result[key] = None
     return result
 
 def turn_lists_to_dicts(d):

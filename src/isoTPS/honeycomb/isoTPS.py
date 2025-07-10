@@ -73,10 +73,11 @@ class isoTPS_Honeycomb(isoTPS.isoTPS):
     @staticmethod
     def load_from_file(filename):
         tps = isoTPS_Honeycomb(0, 0)
-        data = utility.load_dict_from_file(filename)
-        tps._load_from_dict(data)
+        with h5py.File(filename, "r") as hf:
+            data = utility.load_dict_from_hf(hf)
+            tps._load_from_dict(data)
         return tps
-
+        
     def copy(self):
         """
         Returns a copy of this isoTPS

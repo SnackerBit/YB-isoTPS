@@ -1,5 +1,6 @@
 import numpy as np
 import time
+import h5py
 import matplotlib.pyplot as plt
 from ...utility import utility
 from ...utility import debug_logging
@@ -14,8 +15,9 @@ class isoTPS_Square(isoTPS.isoTPS):
     @staticmethod
     def load_from_file(filename):
         tps = isoTPS_Square(0, 0)
-        data = utility.load_dict_from_file(filename)
-        tps._load_from_dict(data)
+        with h5py.File(filename, "r") as hf:
+            data = utility.load_dict_from_hf(hf)
+            tps._load_from_dict(data)
         return tps
 
     def copy(self):

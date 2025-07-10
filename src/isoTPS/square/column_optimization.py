@@ -341,7 +341,6 @@ class variationalColumnOptimizer:
         self.Ws[2*i] = contr
         self.notify_changed_W(2*i)
 
-
     def optimize_W2(self, i):
         """
         Variationally optimizes the W2 tensor at the given index. Assumes that the top and bottom environments at i
