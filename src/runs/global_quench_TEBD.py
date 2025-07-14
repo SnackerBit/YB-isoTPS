@@ -119,7 +119,7 @@ def perform_global_quench_run(tps_params, model_params, dt, N_steps, output_fold
         hf["wall_time"] = end - start
         hf["done"][...] = True
 
-def compute_onsesite_expectation_values(N_steps, output_folder):
+def compute_onsesite_expectation_values(N_steps, output_folder, lattice="square"):
 
     def append_to_log(text):
         """
@@ -135,7 +135,12 @@ def compute_onsesite_expectation_values(N_steps, output_folder):
     for n in range(N_steps+1):
         append_to_log(f"Computing measurement for tps {n} ...")
         start = time.time()
-        tps = isoTPS_Square.load_from_file(f"{output_folder}/tps_{n}.h5")
+        if lattice == "square":
+            tps = isoTPS_Square.load_from_file(f"{output_folder}/tps_{n}.h5")
+        elif lattice == "honeycomb":
+            tps = isoTPS_Honeycomb.load_from_file(f"{output_folder}/tps_{n}.h5")
+        else:
+            raise ValueError(f"Unknown lattice \"{lattice}\"")
         expectation_values.append(tps.compute_expectation_values_onesite([sigma_x, sigma_y, sigma_z]))
         end = time.time()
         append_to_log(f"Took {round(end-start, 4)} seconds.")
