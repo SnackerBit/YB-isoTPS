@@ -6,7 +6,7 @@ This is an implementation of an alternative isometric form for isoTPS, where we 
 
 For a detailed explanation of the algorithms see our paper [[4]](#4) and the master's thesis [[5]](#5). <br />
 
-The repository contains two folders, `src` and `test`. The `src` folder contains the implementation as python code. In the `test` folder a few jupyter notebooks are given as examples of how the algorithms can be used for finding ground states and performing real time evolution on the square and honeyomb lattice.
+The repository contains two folders, `src` and `test`. The `src` folder contains the implementation as python code. In the `test` folder jupyter notebooks are given as examples of how the algorithms can be used for finding ground states and performing real time evolution on the square and honeyomb lattice.
 
 ## References
 <a id="1">[1]</a> 
