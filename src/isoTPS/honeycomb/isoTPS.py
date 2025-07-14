@@ -1,5 +1,6 @@
 import numpy as np
 import time
+import h5py
 import matplotlib.pyplot as plt
 from ...utility import utility
 from ...utility import debug_logging
@@ -10,8 +11,8 @@ from .. import isoTPS
 from .. import shifting_ortho_center
 
 class isoTPS_Honeycomb(isoTPS.isoTPS):
-
-    def __init__(self, Lx, Ly, D_max=4, D_max_horizontal=None, chi_factor=6, chi_max=24, d=2, shifting_options={ "mode" : "svd" }, yb_options={ "mode" : "svd" }, tebd_options={ "mode" : "svd" }, ordering_mode="edges", debug_level=None): # TODO: FIX debug logging
+    
+    def __init__(self, Lx, Ly, D_max=4, D_max_horizontal=None, chi_factor=6, chi_max=24, d=2, shifting_options={ "mode" : "svd" }, yb_options={ "mode" : "svd" }, tebd_options={ "mode" : "svd" }, ordering_mode="edges", perform_variational_column_optimization=False, variational_column_optimization_options={}, debug_logger_options={}):
         """
         Initializes the isoTPS.
 
@@ -49,15 +50,22 @@ class isoTPS_Honeycomb(isoTPS.isoTPS):
             "center": Larger bond dimension is chosen for the upper/lower bond depending on which is closer to the center. "edges": larger bond
             dimension is chosen for the upper bond if we are left of the orthogonality hypersurface, and for the lower bond if we are righ of
             the orthogonality surface. Default : "edges".
-        debug_level : enum class DebugLevel, optional
-            the debug level decides which information is logged and if warnings/errors are printed to the console. See "utility/debug_levels.py"
-            for more information. Default: DebugLevel.NO_DEBUG.
+        perform_variational_column_optimization : bool, optional
+            wether to perform a variational column optimization after shifting the column with YB moves. Default: False.       
+        variational_column_optimization_options : dict, optional
+            options for performing the variational column optimization. See "src/isoTPS/square/column_optimization.py" for more information.
+            Default: {}.
+        debug_logger_options: dict, optional
+            dictionary containing kwargs that get passed into the constructor of the DebugLogger instance used in this isoTPS.
+            This can be used to turn on certain parts of the debug logging. See "utility/debug_logging.py" for more information. Default: {}.
         """
-        super().__init__(Lx, Ly, D_max=D_max, chi_factor=chi_factor, chi_max=chi_max, d=d, shifting_options=shifting_options, yb_options=yb_options, tebd_options=tebd_options, ordering_mode=ordering_mode, debug_level=debug_level)
+        super().__init__(Lx, Ly, D_max=D_max, chi_factor=chi_factor, chi_max=chi_max, d=d, shifting_options=shifting_options, yb_options=yb_options, tebd_options=tebd_options, ordering_mode=ordering_mode, perform_variational_column_optimization=perform_variational_column_optimization, variational_column_optimization_options=variational_column_optimization_options, debug_logger_options=debug_logger_options)
         if D_max_horizontal is None:
             D_max_horizontal = D_max
         self.D_max_horizontal = D_max_horizontal
-
+        if perform_variational_column_optimization == True:
+            raise NotImplementedError("variational column optimization is not implemented for honeycomb lattice!")
+        
     def save_to_file(self, filename):
         """
         Saves this isoTPS to a file.
@@ -67,7 +75,10 @@ class isoTPS_Honeycomb(isoTPS.isoTPS):
         filename : str
             file name
         """
-        data = { "D_max_horizontal" : self.D_max_horizontal }
+        data = { 
+            "D_max_horizontal" : self.D_max_horizontal,
+            "lattice": "honeycomb" 
+            }
         super().save_to_file(filename, data)
 
     @staticmethod
@@ -87,7 +98,7 @@ class isoTPS_Honeycomb(isoTPS.isoTPS):
         copy : instance if class isoTPS_Honeycomb
             the copied isoTPS
         """
-        result = isoTPS_Honeycomb(self.Lx, self.Ly, D_max=self.D_max, D_max_horizontal=self.D_max_horizontal, chi_factor=self.chi_factor, chi_max=self.chi_max, d=self.d, shifting_options=self.shifting_options, yb_options=self.yb_options, tebd_options=self.tebd_options, ordering_mode=self.ordering_mode, debug_level=self.debug_level)
+        result = isoTPS_Honeycomb(self.Lx, self.Ly, D_max=self.D_max, D_max_horizontal=self.D_max_horizontal, chi_factor=self.chi_factor, chi_max=self.chi_max, d=self.d, shifting_options=self.shifting_options, yb_options=self.yb_options, tebd_options=self.tebd_options, ordering_mode=self.ordering_mode, perform_variational_column_optimization=self.perform_variational_column_optimization, variational_column_optimization_options=self.variational_column_optimization_options, debug_logger_options=self.debug_logger_options)
         result._init_as_copy(self)
         return result
 
@@ -100,11 +111,9 @@ class isoTPS_Honeycomb(isoTPS.isoTPS):
         states : list of np.ndarray of shape (d,)
             list of local states. The full many-body state is formed by the kronecker product of all states in the list.
         """
-        # Temporarily set debug level to zero to avoid printing unnecessary debug information during initialization
-        debug_level = self.debug_level
-        self.debug_level = debug_levels.DebugLevel.NO_DEBUG
-        if self.debug_dict is not None:
-            self.debug_dict["debug_level"] = self.debug_level
+        # Temporarily set debug level to zero to avoid collecting unnecessary debug information during initialization
+        temp_debug_logger = self.debug_logger
+        self.debug_logger = debug_logging.DebugLogger()
         def initialize_T_product_state(state=np.array([1.0, 0.0], dtype=np.complex128)):
             T = np.zeros((state.size, 1, 1, 1), dtype=np.complex128)
             T[:, 0, 0, 0] = state[:]
@@ -124,11 +133,9 @@ class isoTPS_Honeycomb(isoTPS.isoTPS):
             self.move_ortho_surface_left(force=True)
         self.move_ortho_surface_right(force=True)
         assert(self.ortho_surface == 0)
-        self.debug_level = debug_level
-        if self.debug_dict is not None:
-            self.debug_dict["debug_level"] = self.debug_level
+        self.debug_logger = temp_debug_logger
 
-    def plot(self, T_colors=None, ax=None, figsize_y=8):
+    def plot(self, T_colors=None, ax=None, figsize_y=8.0, T_tensor_scale=1.0, W_tensor_scale=1.0, show_bond_dims=True):
         """
         Plots the isoTPS, labeling each leg with its respective bond dimension.
         
@@ -166,33 +173,34 @@ class isoTPS_Honeycomb(isoTPS.isoTPS):
             ddy = np.cos(alpha) * delta_l
             ax.arrow(start[0], start[1], dx_2 + ddx, dy_2 + ddy, head_width=0.05, head_length=0.05, color=color)
             ax.arrow(start[0] + dx_2 + ddx, start[1] + dy_2 + ddy, dx_2 - ddx, dy_2 - ddy, head_width=0, color=color)
-            if label is not None:
-                labelCoords = (0, 0)
-                if labelPos == "upper left":
-                    labelCoords = (-5, 5)
-                    ha = "right"
-                elif labelPos == "upper right":
-                    labelCoords = (5, 5)
-                    ha = "left"
-                elif labelPos == "lower left":
-                    labelCoords = (-5, -5)
-                    ha = "right"
-                elif labelPos == "lower right":
-                    labelCoords = (5, -5)
-                    ha = "left"
-                elif labelPos == "right":
-                    labelCoords = (5, 0)
-                    ha = "left"
-                elif labelPos == "left":
-                    ha = "right"
-                    labelCoords = (-5, 0)
-                elif labelPos == "up":
-                    ha = "center"
-                    labelCoords = (0, 5)
-                elif labelPos == "down":
-                    ha = "center"
-                    labelCoords = (0, -5)
-                ax.annotate(label, (start[0] + dx_2, start[1] + dy_2), xytext=labelCoords, textcoords='offset points', ha=ha)
+            if label is None or not show_bond_dims:
+                return
+            labelCoords = (0, 0)
+            if labelPos == "upper left":
+                labelCoords = (-5, 5)
+                ha = "right"
+            elif labelPos == "upper right":
+                labelCoords = (5, 5)
+                ha = "left"
+            elif labelPos == "lower left":
+                labelCoords = (-5, -5)
+                ha = "right"
+            elif labelPos == "lower right":
+                labelCoords = (5, -5)
+                ha = "left"
+            elif labelPos == "right":
+                labelCoords = (5, 0)
+                ha = "left"
+            elif labelPos == "left":
+                ha = "right"
+                labelCoords = (-5, 0)
+            elif labelPos == "up":
+                ha = "center"
+                labelCoords = (0, 5)
+            elif labelPos == "down":
+                ha = "center"
+                labelCoords = (0, -5)
+            ax.annotate(label, (start[0] + dx_2, start[1] + dy_2), xytext=labelCoords, textcoords='offset points', ha=ha)
 
         def compute_tensor_position_T(x, y, p):
             return (np.sqrt(3) * (x + p/3), 2 * y + x + p)
@@ -271,22 +279,22 @@ class isoTPS_Honeycomb(isoTPS.isoTPS):
         # Draw actual T tensors
         for y in range(self.Ly):
             for x in range(self.Lx):
-                ax.add_patch(plt.Circle(compute_tensor_position_T(x, y, 0), 0.06, color=T_colors[self.get_index(x, y, 0)]))
-                ax.add_patch(plt.Circle(compute_tensor_position_T(x, y, 1), 0.06, color=T_colors[self.get_index(x, y, 1)]))
+                ax.add_patch(plt.Circle(compute_tensor_position_T(x, y, 0), 0.06*T_tensor_scale, color=T_colors[self.get_index(x, y, 0)]))
+                ax.add_patch(plt.Circle(compute_tensor_position_T(x, y, 1), 0.06*T_tensor_scale, color=T_colors[self.get_index(x, y, 1)]))
 
         # Draw actual W tensors
         if self.ortho_surface % 2 == 0:
             for y in range(2 * self.Ly - 1):
                 if y == self.ortho_center:
-                    ax.add_patch(plt.Circle(compute_tensor_position_W(self.ortho_surface, y), 0.06, color="orange"))
+                    ax.add_patch(plt.Circle(compute_tensor_position_W(self.ortho_surface, y), 0.06*W_tensor_scale, color="orange"))
                 else:            
-                    ax.add_patch(plt.Circle(compute_tensor_position_W(self.ortho_surface, y), 0.06, color="red"))
+                    ax.add_patch(plt.Circle(compute_tensor_position_W(self.ortho_surface, y), 0.06*W_tensor_scale, color="red"))
         else:
             for y in range(0, 2 * self.Ly - 1, 2):
                 if y == self.ortho_center:
-                    ax.add_patch(plt.Circle(compute_tensor_position_W(self.ortho_surface, y), 0.06, color="orange"))
+                    ax.add_patch(plt.Circle(compute_tensor_position_W(self.ortho_surface, y), 0.06*W_tensor_scale, color="orange"))
                 else:            
-                    ax.add_patch(plt.Circle(compute_tensor_position_W(self.ortho_surface, y), 0.06, color="red"))
+                    ax.add_patch(plt.Circle(compute_tensor_position_W(self.ortho_surface, y), 0.06*W_tensor_scale, color="red"))
 
     def check_isometry_condition(self):
         """
@@ -518,22 +526,22 @@ class isoTPS_Honeycomb(isoTPS.isoTPS):
             W2 = utility.flip_W(W2)
             T = utility.flip_T_honeycomb(T)
         # Save environment tensors (debug)
-        if debug_levels.check_debug_level(self.debug_dict, debug_levels.DebugLevel.LOG_YB_TEBD_ENVIRONMENTS):
-            utility.append_to_dict_list(self.debug_dict, "yb_environments", (W1, W2, T))
+        if self.debug_logger.log_yb_move_environments:
+            self.debug_logger.append_to_log_list(("yb_environments"), {"W1": None if W1 is None else W1.copy(), "W2": None if W2 is None else W2.copy(), "T": T.copy()})
         # Stop time per YB move (debug)
-        if debug_levels.check_debug_level(self.debug_dict, debug_levels.DebugLevel.LOG_PER_SITE_ERROR_AND_WALLTIME):
+        if self.debug_logger.log_algorithm_walltimes or self.debug_logger.log_yb_move_walltimes:
             start = time.time()
         # Perform YB move subroutine
-        W, T, error = yang_baxter_move.yang_baxter_move_1(W1, W2, T, self.D_max_horizontal, debug_dict=self.debug_dict)
+        W, T, error = yang_baxter_move.yang_baxter_move_1(W1, W2, T, self.D_max_horizontal, debug_logger=self.debug_logger)
         # Save error and walltime (debug)
-        if debug_levels.check_debug_level(self.debug_dict, debug_levels.DebugLevel.LOG_PER_SITE_ERROR_AND_WALLTIME):
+        if self.debug_logger.log_algorithm_walltimes or self.debug_logger.log_yb_move_walltimes:
             end = time.time()
-            x, y, p = self.get_position(T_index)
-            self.debug_dict["errors_yb"][y][x*2+p-1] += error
-            self.debug_dict["times_yb"][y][x*2+p-1] += end-start
-            if debug_levels.check_debug_level(self.debug_dict, debug_levels.DebugLevel.LOG_CONSECUTIVE_ERROR_AND_WALLTIME):
-                utility.append_to_dict_list(self.debug_dict, "errors_yb_consecutive", error)
-                utility.append_to_dict_list(self.debug_dict, "times_yb_consecutive", end-start)
+        if self.debug_logger.log_yb_move_errors:
+            self.debug_logger.append_to_log_list(("yb_move_errors"), error)
+        if self.debug_logger.log_yb_move_walltimes:
+            self.debug_logger.append_to_log_list(("yb_move_walltimes"), end-start)
+        if self.debug_logger.log_algorithm_walltimes:
+            self.time_counter_yb_move += end-start
         # Flip tensors back if necessary
         if flip == True:
             W = utility.flip_W(W)
@@ -613,22 +621,22 @@ class isoTPS_Honeycomb(isoTPS.isoTPS):
         elif flip == True and W_index == 2*self.Ly-2:
             mode = "down"
         # Save environment tensors (debug)
-        if debug_levels.check_debug_level(self.debug_dict, debug_levels.DebugLevel.LOG_YB_TEBD_ENVIRONMENTS):
-            utility.append_to_dict_list(self.debug_dict, "yb_environments", (W, T, mode))
+        if self.debug_logger.log_yb_move_environments:
+            self.debug_logger.append_to_log_list(("yb_environments"), {"W1": None if W1 is None else W1.copy(), "W2": None if W2 is None else W2.copy(), "T": T.copy()})
         # Stop time per YB move (debug)
-        if debug_levels.check_debug_level(self.debug_dict, debug_levels.DebugLevel.LOG_PER_SITE_ERROR_AND_WALLTIME):
+        if self.debug_logger.log_algorithm_walltimes or self.debug_logger.log_yb_move_walltimes:
             start = time.time()
         # Perform YB move subroutine
-        W1, W2, T, error = yang_baxter_move.yang_baxter_move_2(W, T, self.D_max, self.chi_max, mode=mode, options=self.yb_options, debug_dict=self.debug_dict, larger_bond_direction=larger_bond_direction)
+        W1, W2, T, error = yang_baxter_move.yang_baxter_move_2(W, T, self.D_max, self.chi_max, mode=mode, options=self.yb_options, debug_logger=self.debug_logger, larger_bond_direction=larger_bond_direction)
         # Save error and walltime (debug)
-        if debug_levels.check_debug_level(self.debug_dict, debug_levels.DebugLevel.LOG_PER_SITE_ERROR_AND_WALLTIME):
+        if self.debug_logger.log_algorithm_walltimes or self.debug_logger.log_yb_move_walltimes:
             end = time.time()
-            x, y, p = self.get_position(T_index)
-            self.debug_dict["errors_yb"][y][x*2+p-1] += error
-            self.debug_dict["times_yb"][y][x*2+p-1]+= end-start
-            if debug_levels.check_debug_level(self.debug_dict, debug_levels.DebugLevel.LOG_CONSECUTIVE_ERROR_AND_WALLTIME):
-                utility.append_to_dict_list(self.debug_dict, "errors_yb_consecutive", error)
-                utility.append_to_dict_list(self.debug_dict, "times_yb_consecutive", end-start)
+        if self.debug_logger.log_yb_move_errors:
+            self.debug_logger.append_to_log_list(("yb_move_errors"), error)
+        if self.debug_logger.log_yb_move_walltimes:
+            self.debug_logger.append_to_log_list(("yb_move_walltimes"), end-start)
+        if self.debug_logger.log_algorithm_walltimes:
+            self.time_counter_yb_move += end-start
         # Flip tensors back if necessary
         if flip == True:
             W1 = utility.flip_W(W1)
@@ -703,8 +711,8 @@ class isoTPS_Honeycomb(isoTPS.isoTPS):
                     self.move_ortho_center_down()
                 column_error += self.perform_yang_baxter_2(self.ortho_center, self.get_index(x, y, 1), flip=True, arrows_should_point_up=False)
         self.ortho_surface -= 1
-        if debug_levels.check_debug_level(self.debug_dict, debug_levels.DebugLevel.LOG_COLUMN_ERRORS):
-            utility.append_to_dict_list(self.debug_dict, "column_errors_yb", column_error)
+        if self.debug_logger.log_approximate_column_error_yb:
+            self.debug_logger.append_to_log_list("approximate_column_errors", column_error)
 
     def move_ortho_surface_right(self, force=False, move_upwards=True):
         """
@@ -755,8 +763,8 @@ class isoTPS_Honeycomb(isoTPS.isoTPS):
                     self.move_ortho_center_down()
                 column_error += self.perform_yang_baxter_2(self.ortho_center, self.get_index(x + 1, 0, 0), flip=False, arrows_should_point_up=True)
         self.ortho_surface += 1
-        if debug_levels.check_debug_level(self.debug_dict, debug_levels.DebugLevel.LOG_COLUMN_ERRORS):
-            utility.append_to_dict_list(self.debug_dict, "column_errors_yb", column_error)
+        if self.debug_logger.log_approximate_column_error_yb:
+            self.debug_logger.append_to_log_list("approximate_column_errors", column_error)
 
     def get_environment_twosite(self):
         r"""
@@ -1035,28 +1043,30 @@ class isoTPS_Honeycomb(isoTPS.isoTPS):
             the error of the YB move. If the debug level is smaller than LOG_PER_SITE_ERROR_AND_WALLTIME,
             -np.float("inf") is returned instead.
         """
-        log_time_and_error = debug_levels.check_debug_level(self.debug_dict, debug_levels.DebugLevel.LOG_PER_SITE_ERROR_AND_WALLTIME)
         # determine index into U_bonds)
         index = self.ortho_surface * (2 * self.Ly - 1) + self.ortho_center
         # retrieve environment
         T1, T2, Wm1, W, Wp1 = self.get_environment_twosite()
         # Save environment tensors (debug)
-        if debug_levels.check_debug_level(self.debug_dict, debug_levels.DebugLevel.LOG_YB_TEBD_ENVIRONMENTS):
-            utility.append_to_dict_list(self.debug_dict, "tebd_environments", (T1, T2, Wm1, W, Wp1))
-        # perform TEBD step
-        if log_time_and_error:
+        if self.debug_logger.log_local_tebd_update_environments:
+            self.debug_logger.append_to_log_list("local_tebd_update_environments", {"T1": T1.copy(), "T2": T2.copy(), "Wm1": None if Wm1 is None else Wm1.copy(), "W": None if W is None else W.copy(), "Wp1": None if Wp1 is None else Wp1.copy()})
+        # Stop time (debug)
+        if self.debug_logger.log_algorithm_walltimes or self.debug_logger.log_local_tebd_update_walltimes:
             start = time.time()
+        # perform TEBD step
         if self.ortho_surface%2 == 0:
-            T1, T2, Wm1, W, Wp1, error = tebd.tebd_step_2(T1, T2, Wm1, W, Wp1, U_bonds[index], self.chi_max, log_error=log_time_and_error, **self.tebd_options)
+            T1, T2, Wm1, W, Wp1, error = tebd.tebd_step_2(T1, T2, Wm1, W, Wp1, U_bonds[index], self.chi_max, debug_logger=self.debug_logger, **self.tebd_options)
         else:
-            T1, T2, W, error = tebd.tebd_step_1(T1, T2, W, U_bonds[index], log_error=log_time_and_error, **self.tebd_options)
-        if log_time_and_error:
+            T1, T2, W, error = tebd.tebd_step_1(T1, T2, W, U_bonds[index], debug_logger=self.debug_logger, **self.tebd_options)
+        # log error and walltimes
+        if self.debug_logger.log_algorithm_walltimes or self.debug_logger.log_local_tebd_update_walltimes:
             end = time.time()
-            self.debug_dict["times_tebd"][self.ortho_center][self.ortho_surface] += end-start
-            self.debug_dict["errors_tebd"][self.ortho_center][self.ortho_surface] += error
-            if debug_levels.check_debug_level(self.debug_dict, debug_levels.DebugLevel.LOG_CONSECUTIVE_ERROR_AND_WALLTIME):
-                utility.append_to_dict_list(self.debug_dict, "errors_tebd_consecutive", error)
-                utility.append_to_dict_list(self.debug_dict, "times_tebd_consecutive", end-start)
+        if self.debug_logger.log_local_tebd_update_errors:
+            self.debug_logger.append_to_log_list("local_tebd_update_errors", error)
+        if self.debug_logger.log_local_tebd_update_walltimes:
+            self.debug_logger.append_to_log_list("local_tebd_update_walltimes", end-start)
+        if self.debug_logger.log_algorithm_walltimes:
+            self.time_counter_tebd_local_update += end-start
         # Update environment
         self.set_environment_twosite(T1, T2, Wm1, W, Wp1)
         return error
@@ -1096,8 +1106,8 @@ class isoTPS_Honeycomb(isoTPS.isoTPS):
                 column_error += self.perform_TEBD_at_ortho_center(U_bonds)
                 self.move_ortho_center_down()
                 self.move_ortho_center_down()
-        if debug_levels.check_debug_level(self.debug_dict, debug_levels.DebugLevel.LOG_COLUMN_ERRORS):
-            utility.append_to_dict_list(self.debug_dict, "column_errors_tebd", column_error)
+        if self.debug_logger.log_approximate_column_error_tebd:
+            self.debug_logger.append_to_log_list("approximate_column_error_tebd", column_error)
 
     def perform_TEBD_along_ortho_surface_chain(self, U_bonds, move_upwards=True):
         """
@@ -1138,8 +1148,8 @@ class isoTPS_Honeycomb(isoTPS.isoTPS):
             for _ in range(2*self.Ly-1, 0, -1-self.ortho_surface%2):
                 column_error += self.perform_TEBD_at_ortho_center(U_bonds)
                 self.move_ortho_center_down() 
-        if debug_levels.check_debug_level(self.debug_dict, debug_levels.DebugLevel.LOG_COLUMN_ERRORS):
-            utility.append_to_dict_list(self.debug_dict, "column_errors_tebd", column_error)
+        if self.debug_logger.log_approximate_column_error_tebd:
+            self.debug_logger.append_to_log_list("approximate_column_error_tebd", column_error)
 
     def perform_TEBD1(self, U_bonds, N_steps):
         """
@@ -1154,6 +1164,7 @@ class isoTPS_Honeycomb(isoTPS.isoTPS):
             number of TEBD steps performed
         """
         for _ in range(N_steps):
+            self.reset_time_counters()
             # apply update on even surfaces
             self.move_ortho_surface_to(0)
             for x in range(0, 2 * self.Lx - 1, 2):
@@ -1167,6 +1178,11 @@ class isoTPS_Honeycomb(isoTPS.isoTPS):
                     self.perform_TEBD_along_ortho_surface_brickwall(U_bonds)
                     self.move_ortho_surface_left()
                     self.move_ortho_surface_left()
+            # Debug logging
+            if self.debug_logger.log_algorithm_walltimes:
+                self.debug_logger.append_to_log_list(("algorithm_walltimes", "yb_move"), self.time_counter_yb_move)
+                self.debug_logger.append_to_log_list(("algorithm_walltimes", "local_tebd_update"), self.time_counter_tebd_local_update)
+                self.debug_logger.append_to_log_list(("algorithm_walltimes", "variational_column_optimization"), self.time_counter_variational_column_optimization)
 
     def perform_TEBD2(self, U_bonds, N_steps):
         """
@@ -1181,6 +1197,7 @@ class isoTPS_Honeycomb(isoTPS.isoTPS):
             number of TEBD steps performed
         """
         for _ in range(N_steps):
+            self.reset_time_counters()
             self.move_to(0, 0)
             for _ in range(2*self.Lx-1):
                 self.perform_TEBD_along_ortho_surface_chain(U_bonds, move_upwards=True)
@@ -1188,3 +1205,8 @@ class isoTPS_Honeycomb(isoTPS.isoTPS):
             for _ in range(2*self.Lx-1):
                 self.perform_TEBD_along_ortho_surface_chain(U_bonds, move_upwards=False)
                 self.move_ortho_surface_left(move_upwards=True)
+            # Debug logging
+            if self.debug_logger.log_algorithm_walltimes:
+                self.debug_logger.append_to_log_list(("algorithm_walltimes", "yb_move"), self.time_counter_yb_move)
+                self.debug_logger.append_to_log_list(("algorithm_walltimes", "local_tebd_update"), self.time_counter_tebd_local_update)
+                self.debug_logger.append_to_log_list(("algorithm_walltimes", "variational_column_optimization"), self.time_counter_variational_column_optimization)
