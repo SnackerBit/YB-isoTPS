@@ -2,11 +2,11 @@
 ## Contents
 This project implements isometric tensor network (isoTPS) algorithms for computing properties of two-dimensional quantum lattice models. 
 Isometric tensor networks [[1]](#1)[[2]](#2) generalize the isometry condition of the popular Matrix Product States [[3]](#3) to two and higher dimensions.
-This is an implementation of an alternative isometric form, where we use the so-called "Yang-Baxter move" (YB move) for shifting the orthogonality hypersurface, in contrast to the Moses move (MM) that was used in the original implementation [[1]](#1)[[2]](#2). <br />
+This is an implementation of an alternative isometric form for isoTPS, where we use the so-called "Yang-Baxter move" (YB move) for shifting the orthogonality hypersurface, in contrast to the Moses move (MM) that was used in the original implementation [[1]](#1)[[2]](#2). <br />
 
 For a detailed explanation of the algorithms see our paper [[4]](#4) and the master's thesis [[5]](#5). <br />
 
-The repository contains two folders, `src` and `test`. The `src` folder contains the implementation as python code. In the `test` folder a few notebooks are given as examples on how the algorithms can be used for finding ground states and performing real time evolution on the square and honeyomb lattice.
+The repository contains two folders, `src` and `test`. The `src` folder contains the implementation as python code. In the `test` folder jupyter notebooks are given as examples of how the algorithms can be used for finding ground states and performing real time evolution on the square and honeyomb lattice.
 
 ## References
 <a id="1">[1]</a> 
