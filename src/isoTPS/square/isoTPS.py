@@ -12,6 +12,19 @@ from . import column_optimization
 
 class isoTPS_Square(isoTPS.isoTPS):
 
+    def save_to_file(self, filename):
+        """
+        Saves this isoTPS to a file.
+        
+        Parameters
+        ----------
+        filename : str
+            file name
+        """
+        data = { "lattice": "square" }
+        super().save_to_file(filename, data)
+
+
     @staticmethod
     def load_from_file(filename):
         tps = isoTPS_Square(0, 0)
@@ -111,21 +124,22 @@ class isoTPS_Square(isoTPS.isoTPS):
             ddy = np.cos(alpha) * delta_l
             ax.arrow(start[0], start[1], dx_2 + ddx, dy_2 + ddy, head_width=0.05, head_length=0.05, color=color)
             ax.arrow(start[0] + dx_2 + ddx, start[1] + dy_2 + ddy, dx_2 - ddx, dy_2 - ddy, head_width=0, color=color)
-            if show_bond_dims:
-                labelCoords = (0, 0)
-                if labelPos == "upper left":
-                    labelCoords = (-5, 5)
-                    ha = "right"
-                elif labelPos == "upper right":
-                    labelCoords = (5, 5)
-                    ha = "left"
-                elif labelPos == "right":
-                    labelCoords = (5, 0)
-                    ha = "left"
-                elif labelPos == "left":
-                    ha = "right"
-                    labelCoords = (-5, 0)
-                ax.annotate(label, (start[0] + dx_2, start[1] + dy_2), xytext=labelCoords, textcoords='offset points', ha=ha)
+            if label is None or not show_bond_dims:
+                return
+            labelCoords = (0, 0)
+            if labelPos == "upper left":
+                labelCoords = (-5, 5)
+                ha = "right"
+            elif labelPos == "upper right":
+                labelCoords = (5, 5)
+                ha = "left"
+            elif labelPos == "right":
+                labelCoords = (5, 0)
+                ha = "left"
+            elif labelPos == "left":
+                ha = "right"
+                labelCoords = (-5, 0)
+            ax.annotate(label, (start[0] + dx_2, start[1] + dy_2), xytext=labelCoords, textcoords='offset points', ha=ha)
 
         # Draw legs coming from all tensors at p = 0
         for x in range(self.Lx):
