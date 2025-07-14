@@ -153,8 +153,8 @@ class isoTPS_Honeycomb(isoTPS.isoTPS):
         ax.get_yaxis().set_visible(False)
 
         if T_colors is None:
-            # Default color: bright blue
-            T_colors = [np.array([31, 119, 180]) / 255] * self.Lx * self.Ly * 2
+            # Default color: black
+            T_colors = [np.array([0, 0, 0])] * self.Lx * self.Ly * 2
 
         # Helper function for drawing labelled arrows
         def construct_labelled_arrow(start, direction, label=None, labelPos="upper left", color="black"):
