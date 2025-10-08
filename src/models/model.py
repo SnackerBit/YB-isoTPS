@@ -1,4 +1,3 @@
-import numpy as np
 import scipy.sparse
 import scipy.sparse.linalg
 from ..utility import utility
@@ -10,19 +9,19 @@ def compute_groundstate_info_exact(Hs, L, observables):
 
     Parameters
     ----------
-    Hs : np.ndarray of shape (n, n) or list of np.ndarray of shape (n, n)
+    Hs : backend.array_type of shape (n, n) or list of backend.array_type of shape (n, n)
         Hamiltonian or list of Hamiltonians. The dimension is n = d**L,
         with the local dimension d
     L : int
         number of local systems (sites)
-    observables : list of np.ndarray of shape (d, d)
+    observables : list of backend.array_type of shape (d, d)
         list of local observables
     
     Returns
     -------
     Es : float or list of float
         energy of the ground state (or list of energies of the ground states)
-    psis : np.ndarray of shape (n,) or list of np.ndarray of shape (n,)
+    psis : backend.array_type of shape (n,) or list of backend.array_type of shape (n,)
         ground state (or list of ground states)
     expectation_values : list
         list containing the per site expectation values of the ground state

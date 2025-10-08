@@ -1,4 +1,4 @@
-import numpy as np
+from .. import backend
 
 class ComplexStiefelManifold:
     """
@@ -37,26 +37,26 @@ class ComplexStiefelManifold:
         
         Parameters
         ----------
-        x : np.ndarray of shape self.shape, or reshapable into shape (n, m)
+        x : backend.array_type of shape self.shape, or reshapable into shape (n, m)
             element from the embedding space.
-        xi : np.ndarray of shape self.shape, or reshapable into shape (n, m)
+        xi : backend.array_type of shape self.shape, or reshapable into shape (n, m)
             element from the embedding space.
         
         Returns
         -------
-        result : np.ndarray of shape self.shape
+        result : backend.array_type of shape self.shape
             the retracted isometric tensor
         """
         x_copy = x.copy()
         temp = x.reshape((self.n, self.p))
         if xi is not None:
             temp = temp + xi.reshape((self.n, self.p))
-        assert(np.allclose(x, x_copy))
-        Q, R = np.linalg.qr(temp)
+        assert(backend.allclose(x, x_copy))
+        Q, R = backend.qr(temp)
         # Ensure uniqueness of QR decomposition by flipping signs of rows such that
         # all diagonal elements of R are positive
-        P = np.diag(np.sign(np.diag(R)))
-        return np.reshape(Q@P, self.shape)
+        P = backend.diag(backend.sign(backend.diag(R)))
+        return backend.reshape(Q@P, self.shape)
 
     def project_to_tangent_space(self, x, xi):
         """
@@ -64,20 +64,20 @@ class ComplexStiefelManifold:
 
         Parameters
         ----------
-        x : np.ndarray of shape self.shape, or reshapable into shape (n, m)
+        x : backend.array_type of shape self.shape, or reshapable into shape (n, m)
             element of the complex stiefel manifold. Must be an isometry.
             This is not explicitly checked by this function for performance reasons.
-        xi : np.ndarray of shape self.shape, or reshapable into shape (n, m)
+        xi : backend.array_type of shape self.shape, or reshapable into shape (n, m)
             element of the embedding space.
         
         Returns
         -------
-        result : np.ndarray of shape self.shape
+        result : backend.array_type of shape self.shape
             the tangent vector obtained by projecting xi to the tangent space of x
         """
         temp = x.reshape((self.n, self.p))
         xi = xi.reshape((self.n, self.p))
-        return np.reshape(xi - 0.5 * temp@(np.conj(temp).T@xi + np.conj(xi).T@temp), self.shape)
+        return backend.reshape(xi - 0.5 * temp@(backend.conj(temp).T@xi + backend.conj(xi).T@temp), self.shape)
 
     def inner_product(self, x, y):
         """
@@ -85,9 +85,9 @@ class ComplexStiefelManifold:
 
         Parameters
         ----------
-        x : np.ndarray of shape self.shape, or reshapable into shape (n, m)
+        x : backend.array_type of shape self.shape, or reshapable into shape (n, m)
             first tangent vector
-        y : np.ndarray of shape self.shape, or reshapable into shape (n, m)
+        y : backend.array_type of shape self.shape, or reshapable into shape (n, m)
             second tangent vector
 
         Returns
@@ -95,7 +95,7 @@ class ComplexStiefelManifold:
         result : float
             the inner product of x and y
         """
-        return np.real(np.tensordot(x.conj(), y, axes=x.ndim))
+        return backend.real(backend.tensordot(x.conj(), y, axes=x.ndim))
 
     def norm(self, x):
         """
@@ -103,7 +103,7 @@ class ComplexStiefelManifold:
 
         Parameters
         ----------
-        x : np.ndarray of shape self.shape, or reshapable into shape (n, m)
+        x : backend.array_type of shape self.shape, or reshapable into shape (n, m)
             tangent vector
 
         Returns
@@ -111,7 +111,7 @@ class ComplexStiefelManifold:
         result : float
             the norm 
         """
-        return np.linalg.norm(x)
+        return backend.norm(x)
     
     def transport(self, x, xi):
         """
@@ -119,15 +119,15 @@ class ComplexStiefelManifold:
 
         Parameters
         ----------
-        x : np.ndarray of shape self.shape, or reshapable into shape (n, m)
+        x : backend.array_type of shape self.shape, or reshapable into shape (n, m)
             element of the complex stiefel manifold. Must be an isometry.
             This is not explicitly checked by this function for performance reasons.
-        xi : np.ndarray of shape self.shape, or reshapable into shape (n, m)
+        xi : backend.array_type of shape self.shape, or reshapable into shape (n, m)
             element of the tangent space at an arbitrary element of the manifold.
 
         Returns
         -------
-        result : np.ndarray of shape self.shape
+        result : backend.array_type of shape self.shape
             the tangent vector transported to the tangent space of x
         """
         return self.project_to_tangent_space(x, xi)
@@ -138,7 +138,7 @@ class ComplexStiefelManifold:
 
         Returns
         -------
-        result : np.ndarray of shape self.shape
+        result : backend.array_type of shape self.shape
             zero tangent vector
         """
-        return np.zeros(self.shape, dtype=np.complex128)
+        return backend.zeros(self.shape, dtype=backend.dtype_complex)

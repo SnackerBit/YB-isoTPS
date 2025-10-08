@@ -1,4 +1,4 @@
-import numpy as np
+from .. import backend
 from .. import utility
 from .. import debug_logging
 
@@ -9,7 +9,7 @@ def disentangle(theta, eps=1e-10, N_iters=200, min_iters=0, debug_logger=debug_l
     
     Parameters
     ----------
-    theta : np.ndarray of shape (l, i, j, r)
+    theta : backend.array_type of shape (l, i, j, r)
         Wavefunction tensor to be disentangled.
     eps : float, optional
         After the difference in renyi entropy of two consecutive iterations is smaller than this threshhold value,
@@ -24,7 +24,7 @@ def disentangle(theta, eps=1e-10, N_iters=200, min_iters=0, debug_logger=debug_l
 
     Returns
     -------
-    U_final : np.ndarray of shape (i, j, i*, j*)
+    U_final : backend.array_type of shape (i, j, i*, j*)
         final disentangling unitary after optimization
     """
     # Helper function
@@ -34,30 +34,30 @@ def disentangle(theta, eps=1e-10, N_iters=200, min_iters=0, debug_logger=debug_l
 
         Parameters
         ----------
-        theta : np.ndarray of shape (l, d1, d2, r)
+        theta : backend.array_type of shape (l, d1, d2, r)
             current wavefunction tensor
         
         Returns
         -------
         s : float
             renyi 2 entropy of the wavefunction
-        u : np.ndarray of shape (d1*d2, d1*d2)
+        u : backend.array_type of shape (d1*d2, d1*d2)
             update for disentangling unitary
         """
         chi = theta.shape
-        rhoL = np.tensordot(theta, np.conj(theta), axes = [[2, 3], [2, 3]]) # ml d1 [d2] [mr]; ml* d1* [d2*] [mr*] -> ml d1 ml* d1* { D^9 }
+        rhoL = backend.tensordot(theta, backend.conj(theta), axes = [[2, 3], [2, 3]]) # ml d1 [d2] [mr]; ml* d1* [d2*] [mr*] -> ml d1 ml* d1* { D^9 }
 
-        dS = np.tensordot(rhoL, theta, axes = [[2, 3], [0, 1] ]) # ml d1 [ml*] [d1*]; [ml] [d1] d2 mr -> ml d1 d2 mr { D^9 }
-        dS = np.tensordot( np.conj(theta), dS, axes = [[0, 3], [0, 3]]) # [ml] d1 d2 [mr]; [ml*] d1* d2* [mr*] { D^8 }
+        dS = backend.tensordot(rhoL, theta, axes = [[2, 3], [0, 1] ]) # ml d1 [ml*] [d1*]; [ml] [d1] d2 mr -> ml d1 d2 mr { D^9 }
+        dS = backend.tensordot( backend.conj(theta), dS, axes = [[0, 3], [0, 3]]) # [ml] d1 d2 [mr]; [ml*] d1* d2* [mr*] { D^8 }
 
         dS = dS.reshape((chi[1]*chi[2], -1))
-        s2 = np.trace( dS )
+        s2 = backend.trace( dS )
         
         X, Y, Z = utility.safe_svd(dS)
-        return -np.log(s2), (np.dot(X, Z).T).conj()
+        return -backend.log(s2), (backend.dot(X, Z).T).conj()
     # Initialize
     _, d1, d2, _ = theta.shape
-    U = np.eye(d1*d2, dtype = theta.dtype) # { D^4 }
+    U = backend.eye(d1*d2, dtype = theta.dtype) # { D^4 }
     # debug info
     if debug_logger.disentangling_log_iterates:
         iterates = []
@@ -67,11 +67,11 @@ def disentangle(theta, eps=1e-10, N_iters=200, min_iters=0, debug_logger=debug_l
     Ss = []
     while m < N_iters and (go or m < min_iters):
         s, u = _U2(theta) 
-        U = np.dot(u, U)
+        U = backend.dot(u, U)
         if debug_logger.disentangling_log_iterates:
             iterates.append(U.reshape((d1,d2,d1,d2)))
         u = u.reshape((d1,d2,d1,d2))
-        theta = np.tensordot(u.conj(), theta, axes = [[2, 3], [1, 2]]).transpose([2, 0, 1, 3])
+        theta = backend.tensordot(u.conj(), theta, axes = [[2, 3], [1, 2]]).transpose([2, 0, 1, 3])
         Ss.append(s)
         if m > 1:
             go = Ss[-2] - Ss[-1] > eps 
@@ -82,4 +82,4 @@ def disentangle(theta, eps=1e-10, N_iters=200, min_iters=0, debug_logger=debug_l
     if debug_logger.disentangling_log_info:
         debug_logger.append_to_log_list(("disentangler_info", "N_iters"), m)
     # Return result
-    return np.reshape(np.conj(U), (d1, d2, d1, d2))
+    return backend.reshape(backend.conj(U), (d1, d2, d1, d2))

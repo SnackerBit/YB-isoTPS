@@ -1,17 +1,17 @@
-import numpy as np
 import scipy
 from . import model
 from ..utility import utility
+from ..utility import backend
 
 class Kitaev(model.Model):
     """
     The Kitaev Honeycomb model
     """
 
-    sigma_x = np.array([[0, 1], [1, 0]])
-    sigma_y = np.array([[0, -1.j], [1.j, 0]])
-    sigma_z = np.array([[1, 0], [0, -1]])
-    eye = np.array([[1, 0], [0, 1]])
+    sigma_x = backend.array([[0, 1], [1, 0]])
+    sigma_y = backend.array([[0, -1.j], [1.j, 0]])
+    sigma_z = backend.array([[1, 0], [0, -1]])
+    eye = backend.array([[1, 0], [0, 1]])
 
     def __init__(self, Kx, Ky, Kz):
         self.Kx = float(Kx)
@@ -33,9 +33,9 @@ class Kitaev(model.Model):
         """
         Computes the Hamiltonian as a list of 2D bond operators for a 2D honeycomb lattice.
         """
-        xx = - np.kron(self.sigma_x, self.sigma_x).reshape(2, 2, 2, 2)
-        yy = - np.kron(self.sigma_x, self.sigma_x).reshape(2, 2, 2, 2)
-        zz = - np.kron(self.sigma_x, self.sigma_x).reshape(2, 2, 2, 2)
+        xx = - backend.kron(self.sigma_x, self.sigma_x).reshape(2, 2, 2, 2)
+        yy = - backend.kron(self.sigma_x, self.sigma_x).reshape(2, 2, 2, 2)
+        zz = - backend.kron(self.sigma_x, self.sigma_x).reshape(2, 2, 2, 2)
         H_bonds = []
         for i in range(2 * Lx - 1):
             if i%2 == 0:

@@ -1,4 +1,4 @@
-import numpy as np
+from .. import backend
 from .. import utility
 from ..riemannian_optimization import conjugate_gradients
 from ..riemannian_optimization import trust_region_method
@@ -13,7 +13,7 @@ def disentangle_CG(theta, chi, debug_logger=debug_logging.DebugLogger(), **kwarg
 
     Parameters
     ----------
-    theta : np.ndarray of shape (l, i, j, r)
+    theta : backend.array_type of shape (l, i, j, r)
         wavefunction tensor to be disentangled.
     chi : int
         truncated bond dimension used for the computation of the cost function
@@ -25,12 +25,12 @@ def disentangle_CG(theta, chi, debug_logger=debug_logging.DebugLogger(), **kwarg
         
     Returns
     -------
-    U_final : np.ndarray of shape (i, j, i*, j*)
+    U_final : backend.array_type of shape (i, j, i*, j*)
         final disentangling unitary after optimization
     """
     # Initialize disentangling unitary with identity
     _, D1, D2, _ = theta.shape
-    U0 = np.reshape(np.eye(D1*D2).astype(np.complex128), (D1, D2, D1, D2))
+    U0 = backend.reshape(backend.eye(D1*D2).astype(backend.dtype_complex), (D1, D2, D1, D2))
     # Perform TRM optimization
     construct_new_iterate = lambda U, _ : truncErrorIterate.TruncErrorIterateCG(U, theta, chi, chi_max=None, N_iters_svd=None, eps_svd=0, old_iterate=None)
     manifold = stiefel_manifold.ComplexStiefelManifold(n=D1*D2, p=D1*D2, shape=U0.shape)
@@ -54,7 +54,7 @@ def disentangle_approx_CG(theta, chi, N_iters_svd=5, eps_svd=0.0, N_iters_svd_in
 
     Parameters
     ----------
-    theta : np.ndarray of shape (l, i, j, r)
+    theta : backend.array_type of shape (l, i, j, r)
         wavefunction tensor to be disentangled.
     chi : int
         truncated bond dimension used for the computation of the cost function
@@ -75,12 +75,12 @@ def disentangle_approx_CG(theta, chi, N_iters_svd=5, eps_svd=0.0, N_iters_svd_in
         
     Returns
     -------
-    U_final : np.ndarray of shape (i, j, i*, j*)
+    U_final : backend.array_type of shape (i, j, i*, j*)
         final disentangling unitary after optimization
     """
     # Initialize disentangling unitary with identity
     _, D1, D2, _ = theta.shape
-    U0 = np.reshape(np.eye(D1*D2).astype(np.complex128), (D1, D2, D1, D2))
+    U0 = backend.reshape(backend.eye(D1*D2).astype(backend.dtype_complex), (D1, D2, D1, D2))
     # Perform TRM optimization
     construct_new_iterate = lambda U, old_iterate : truncErrorIterate.TruncErrorIterateCG(U, theta, chi, chi_max=None, N_iters_svd=N_iters_svd, eps_svd=eps_svd)
     manifold = stiefel_manifold.ComplexStiefelManifold(n=D1*D2, p=D1*D2, shape=U0.shape)
@@ -104,7 +104,7 @@ def disentangle_TRM(theta, chi, debug_logger=debug_logging.DebugLogger(), **kwar
 
     Parameters
     ----------
-    theta : np.ndarray of shape (l, i, j, r)
+    theta : backend.array_type of shape (l, i, j, r)
         wavefunction tensor to be disentangled.
     chi : int
         truncated bond dimension used for the computation of the cost function
@@ -116,12 +116,12 @@ def disentangle_TRM(theta, chi, debug_logger=debug_logging.DebugLogger(), **kwar
         
     Returns
     -------
-    U_final : np.ndarray of shape (i, j, i*, j*)
+    U_final : backend.array_type of shape (i, j, i*, j*)
         final disentangling unitary after optimization
     """
     # Initialize disentangling unitary with identity
     _, D1, D2, _ = theta.shape
-    U0 = np.reshape(np.eye(D1*D2).astype(np.complex128), (D1, D2, D1, D2))
+    U0 = backend.reshape(backend.eye(D1*D2).astype(backend.dtype_complex), (D1, D2, D1, D2))
     # Perform TRM optimization
     construct_new_iterate = lambda U, _ : truncErrorIterate.TruncErrorIterateTRM(U, theta, chi)
     manifold = stiefel_manifold.ComplexStiefelManifold(n=D1*D2, p=D1*D2, shape=U0.shape)
@@ -144,7 +144,7 @@ def disentangle_approx_TRM(theta, chi, chi_max=None, N_iters_svd=2, eps_svd=0.0,
 
     Parameters
     ----------
-    theta : np.ndarray of shape (l, i, j, r)
+    theta : backend.array_type of shape (l, i, j, r)
         wavefunction tensor to be disentangled.
     chi : int
         truncated bond dimension used for the computation of the cost function
@@ -171,14 +171,14 @@ def disentangle_approx_TRM(theta, chi, chi_max=None, N_iters_svd=2, eps_svd=0.0,
         
     Returns
     -------
-    U_final : np.ndarray of shape (i, j, i*, j*)
+    U_final : backend.array_type of shape (i, j, i*, j*)
         final disentangling unitary after optimization
     """
     if chi_max is None:
         chi_max = chi
     # Initialize disentangling unitary with identity
     _, D1, D2, _ = theta.shape
-    U0 = np.reshape(np.eye(D1*D2).astype(np.complex128), (D1, D2, D1, D2))
+    U0 = backend.reshape(backend.eye(D1*D2).astype(backend.dtype_complex), (D1, D2, D1, D2))
     # Perform TRM optimization
     construct_new_iterate = lambda U, old_iterate : truncErrorIterate.TruncErrorIterateApproxTRM(U, theta, chi, chi_max=chi_max, N_iters_svd=N_iters_svd, eps_svd=eps_svd, old_iterate=old_iterate)
     manifold = stiefel_manifold.ComplexStiefelManifold(n=D1*D2, p=D1*D2, shape=U0.shape)
@@ -200,7 +200,7 @@ def disentangle(theta, chi, method="trm", debug_logger=debug_logging.DebugLogger
 
     Parameters
     ----------
-    theta : np.ndarray of shape (l, i, j, r)
+    theta : backend.array_type of shape (l, i, j, r)
         wavefunction tensor to be disentangled.
     chi : int
         truncated bond dimension used for the computation of the cost function
@@ -214,7 +214,7 @@ def disentangle(theta, chi, method="trm", debug_logger=debug_logging.DebugLogger
 
     Returns
     -------
-    U_final : np.ndarray of shape (i, j, i*, j*)
+    U_final : backend.array_type of shape (i, j, i*, j*)
         final disentangling unitary after optimization
     """
     if method == "trm":
@@ -230,7 +230,7 @@ def disentangle_approx(theta, chi, method="cg", debug_logger=debug_logging.Debug
 
     Parameters
     ----------
-    theta : np.ndarray of shape (l, i, j, r)
+    theta : backend.array_type of shape (l, i, j, r)
         wavefunction tensor to be disentangled.
     chi : int
         bond dimension that the SVD of Utheta is truncated to. Smaller chi will speed up the algorithm
@@ -245,7 +245,7 @@ def disentangle_approx(theta, chi, method="cg", debug_logger=debug_logging.Debug
 
     RReturns
     -------
-    U_final : np.ndarray of shape (i, j, i*, j*)
+    U_final : backend.array_type of shape (i, j, i*, j*)
         final disentangling unitary after optimization
     """
     if method == "trm":

@@ -1,10 +1,11 @@
-import numpy as np
 import h5py
 import os
 import time
+import numpy as np
 from ..isoTPS.square.isoTPS import isoTPS_Square
 from ..isoTPS.honeycomb.isoTPS import isoTPS_Honeycomb
 from ..models import tfi
+from ..utility import backend
 from ..utility import utility
 from ..utility import debug_logging
 
@@ -150,7 +151,7 @@ def perform_gs_search_run(tps_params, model_params, dtau_l, dtau_r, max_iters_TE
 
     # Prepare Hamiltonian
     H_bonds = tfi.TFI(model_params["g"], model_params["J"]).compute_H_bonds_2D_Square(tps_params["Lx"], tps_params["Ly"])
-    best_tps_data["E"] = np.sum(best_tps_data["tps"].copy().compute_expectation_values_twosite(H_bonds))
+    best_tps_data["E"] = backend.sum(best_tps_data["tps"].copy().compute_expectation_values_twosite(H_bonds))
 
     def save_checkpoint(best_tps_data, n_gss, n_TEBD, algorithm_data):
         algorithm_data["best_energy"] = best_tps_data["E"]
@@ -170,13 +171,13 @@ def perform_gs_search_run(tps_params, model_params, dtau_l, dtau_r, max_iters_TE
             append_to_log(f"Computing TEBD step {n + 1} with dtau = {dtau} ...")
             start_TEBD = time.time()
             best_tps_data["tps"].perform_TEBD2(U_bonds, 1)
-            E_new = np.sum(best_tps_data["tps"].copy().compute_expectation_values_twosite(H_bonds))
+            E_new = backend.sum(best_tps_data["tps"].copy().compute_expectation_values_twosite(H_bonds))
             end_TEBD = time.time()
             append_to_log(f"Energy = {E_new}, took {round(end_TEBD-start_TEBD, 3)} seconds.")
             if best_tps_data["tps"].debug_logger.log_yb_move_walltimes:
-                append_to_log(f"Total time YB: {np.sum(best_tps_data['tps'].debug_logger.log_dict['yb_move_walltimes'])}")
+                append_to_log(f"Total time YB: {backend.sum(best_tps_data['tps'].debug_logger.log_dict['yb_move_walltimes'])}")
             if best_tps_data["tps"].debug_logger.log_local_tebd_update_walltimes:
-                append_to_log(f"Total time TEBD: {np.sum(best_tps_data['tps'].debug_logger.log_dict['local_tebd_update_walltimes'])}")
+                append_to_log(f"Total time TEBD: {backend.sum(best_tps_data['tps'].debug_logger.log_dict['local_tebd_update_walltimes'])}")
             if E_new > best_tps_data["E"]:
                 # energy increased -> terminate
                 best_tps_data["tps"] = tps_prev

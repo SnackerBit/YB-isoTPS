@@ -1,4 +1,4 @@
-import numpy as np
+from .. import backend
 from . import disentangle_renyi_2
 from .. import utility
 from ..riemannian_optimization import conjugate_gradients
@@ -14,7 +14,7 @@ def disentangle_CG(theta, renyi_alpha=0.5, debug_logger=debug_logging.DebugLogge
 
     Parameters
     ----------
-    theta : np.ndarray of shape (l, i, j, r)
+    theta : backend.array_type of shape (l, i, j, r)
         wavefunction tensor to be disentangled.
     renyi_alpha : float, optional
         renyi alpha. Default: 0.5.
@@ -26,12 +26,12 @@ def disentangle_CG(theta, renyi_alpha=0.5, debug_logger=debug_logging.DebugLogge
 
     Returns
     -------
-    U_final : np.ndarray of shape (i, j, i*, j*)
+    U_final : backend.array_type of shape (i, j, i*, j*)
         final disentangling unitary after optimization
     """
     # Initialize disentangling unitary with identity
     _, D1, D2, _ = theta.shape
-    U0 = np.reshape(np.eye(D1*D2).astype(np.complex128), (D1, D2, D1, D2))
+    U0 = backend.reshape(backend.eye(D1*D2).astype(backend.dtype_complex), (D1, D2, D1, D2))
     # Perform TRM optimization
     construct_new_iterate = lambda U, _ : renyiAlphaIterate.RenyiAlphaIterateCG(U, theta, renyi_alpha, chi_max=None, N_iters_svd=None, eps_svd=0, old_iterate=None)
     manifold = stiefel_manifold.ComplexStiefelManifold(n=D1*D2, p=D1*D2, shape=U0.shape)
@@ -55,7 +55,7 @@ def disentangle_approx_CG(theta, chi, renyi_alpha=0.5, N_iters_svd=5, eps_svd=1e
 
     Parameters
     ----------
-    theta : np.ndarray of shape (l, i, j, r)
+    theta : backend.array_type of shape (l, i, j, r)
         wavefunction tensor to be disentangled.
     chi : int
         bond dimension that the SVD of Utheta is truncated to. Smaller chi will speed up the algorithm
@@ -79,12 +79,12 @@ def disentangle_approx_CG(theta, chi, renyi_alpha=0.5, N_iters_svd=5, eps_svd=1e
         
     Returns
     -------
-    U_final : np.ndarray of shape (i, j, i*, j*)
+    U_final : backend.array_type of shape (i, j, i*, j*)
         final disentangling unitary after optimization
     """
     # Initialize disentangling unitary with identity
     _, D1, D2, _ = theta.shape
-    U0 = np.reshape(np.eye(D1*D2).astype(np.complex128), (D1, D2, D1, D2))
+    U0 = backend.reshape(backend.eye(D1*D2).astype(backend.dtype_complex), (D1, D2, D1, D2))
     # Perform TRM optimization
     construct_new_iterate = lambda U, old_iterate : renyiAlphaIterate.RenyiAlphaIterateCG(U, theta, renyi_alpha, chi_max=chi, N_iters_svd=N_iters_svd, eps_svd=eps_svd)
     manifold = stiefel_manifold.ComplexStiefelManifold(n=D1*D2, p=D1*D2, shape=U0.shape)
@@ -108,7 +108,7 @@ def disentangle_TRM(theta, renyi_alpha=0.5, debug_logger=debug_logging.DebugLogg
 
     Parameters
     ----------
-    theta : np.ndarray of shape (l, i, j, r)
+    theta : backend.array_type of shape (l, i, j, r)
         wavefunction tensor to be disentangled.
     renyi_alpha : float, optional
         renyi alpha. Default: 0.5.
@@ -120,12 +120,12 @@ def disentangle_TRM(theta, renyi_alpha=0.5, debug_logger=debug_logging.DebugLogg
         
     Returns
     -------
-    U_final : np.ndarray of shape (i, j, i*, j*)
+    U_final : backend.array_type of shape (i, j, i*, j*)
         final disentangling unitary after optimization
     """
     # Initialize disentangling unitary with identity
     _, D1, D2, _ = theta.shape
-    U0 = np.reshape(np.eye(D1*D2).astype(np.complex128), (D1, D2, D1, D2))
+    U0 = backend.reshape(backend.eye(D1*D2).astype(backend.dtype_complex), (D1, D2, D1, D2))
     # Perform TRM optimization
     construct_new_iterate = lambda U, _ : renyiAlphaIterate.RenyiAlphaIterateTRM(U, theta, renyi_alpha)
     manifold = stiefel_manifold.ComplexStiefelManifold(n=D1*D2, p=D1*D2, shape=U0.shape)
@@ -148,7 +148,7 @@ def disentangle_approx_TRM(theta, chi, renyi_alpha=0.5, N_iters_svd=2, eps_svd=1
 
     Parameters
     ----------
-    theta : np.ndarray of shape (l, i, j, r)
+    theta : backend.array_type of shape (l, i, j, r)
         wavefunction tensor to be disentangled.
     chi : int
         bond dimension that the SVD of Utheta is truncated to. Smaller chi will speed up the algorithm
@@ -172,12 +172,12 @@ def disentangle_approx_TRM(theta, chi, renyi_alpha=0.5, N_iters_svd=2, eps_svd=1
         
     Returns
     -------
-    U_final : np.ndarray of shape (i, j, i*, j*)
+    U_final : backend.array_type of shape (i, j, i*, j*)
         final disentangling unitary after optimization
     """
     # Initialize disentangling unitary with identity
     _, D1, D2, _ = theta.shape
-    U0 = np.reshape(np.eye(D1*D2).astype(np.complex128), (D1, D2, D1, D2))
+    U0 = backend.reshape(backend.eye(D1*D2).astype(backend.dtype_complex), (D1, D2, D1, D2))
     # Perform TRM optimization
     construct_new_iterate = lambda U, old_iterate : renyiAlphaIterate.RenyiAlphaIterateApproxTRM(U, theta, renyi_alpha, chi_max=chi, N_iters_svd=N_iters_svd, eps_svd=eps_svd, old_iterate=old_iterate)
     manifold = stiefel_manifold.ComplexStiefelManifold(n=D1*D2, p=D1*D2, shape=U0.shape)
@@ -199,7 +199,7 @@ def disentangle(theta, renyi_alpha=2.0, method="power_iteration", debug_logger=d
 
     Parameters
     ----------
-    theta : np.ndarray of shape (l, i, j, r)
+    theta : backend.array_type of shape (l, i, j, r)
         wavefunction tensor to be disentangled.
     renyi_alpha : float, optional
         renyi alpha. Default: 0.5.
@@ -213,7 +213,7 @@ def disentangle(theta, renyi_alpha=2.0, method="power_iteration", debug_logger=d
 
     Returns
     -------
-    U_final : np.ndarray of shape (i, j, i*, j*)
+    U_final : backend.array_type of shape (i, j, i*, j*)
         final disentangling unitary after optimization
     """
     if method == "power_iteration":
@@ -233,7 +233,7 @@ def disentangle_approx(theta, chi, renyi_alpha=2.0, method="trm", debug_logger=d
 
     Parameters
     ----------
-    theta : np.ndarray of shape (l, i, j, r)
+    theta : backend.array_type of shape (l, i, j, r)
         wavefunction tensor to be disentangled.
     chi : int
         bond dimension that the SVD of Utheta is truncated to. Smaller chi will speed up the algorithm
@@ -250,7 +250,7 @@ def disentangle_approx(theta, chi, renyi_alpha=2.0, method="trm", debug_logger=d
 
     Returns
     -------
-    U_final : np.ndarray of shape (i, j, i*, j*)
+    U_final : backend.array_type of shape (i, j, i*, j*)
         final disentangling unitary after optimization
     """
     if method == "trm":

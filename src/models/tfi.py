@@ -1,17 +1,17 @@
-import numpy as np
 import scipy
 from . import model
 from ..utility import utility
+from ..utility import backend
 
 class TFI(model.Model):
     """
     Transverse Field Ising model
     """
 
-    sigma_x = np.array([[0, 1], [1, 0]])
-    sigma_y = np.array([[0, -1.j], [1.j, 0]])
-    sigma_z = np.array([[1, 0], [0, -1]])
-    eye = np.array([[1, 0], [0, 1]])
+    sigma_x = backend.array([[0, 1], [1, 0]])
+    sigma_y = backend.array([[0, -1.j], [1.j, 0]])
+    sigma_z = backend.array([[1, 0], [0, -1]])
+    eye = backend.array([[1, 0], [0, 1]])
 
     def __init__(self, g, J):
         self.g = float(g)
@@ -43,8 +43,8 @@ class TFI(model.Model):
                 gL = self.g
             if i+1 == L-1: # last bond
                 gR = self.g
-            H_bond = -self.J * np.kron(self.sigma_x, self.sigma_x) - gL * np.kron(self.sigma_z, self.eye) - gR * np.kron(self.eye, self.sigma_z)
-            H_bonds.append(np.reshape(H_bond, (2, 2, 2, 2)))
+            H_bond = -self.J * backend.kron(self.sigma_x, self.sigma_x) - gL * backend.kron(self.sigma_z, self.eye) - gR * backend.kron(self.eye, self.sigma_z)
+            H_bonds.append(backend.reshape(H_bond, (2, 2, 2, 2)))
         return H_bonds
 
     def compute_H_1D(self, L):
@@ -97,8 +97,8 @@ class TFI(model.Model):
             #print(connections_left, connections_right)
             gL = self.g / connections_left
             gR = self.g / connections_right
-            H_bond = -self.J * np.kron(self.sigma_x, self.sigma_x) - gL * np.kron(self.sigma_z, self.eye) - gR * np.kron(self.eye, self.sigma_z)
-            return np.reshape(H_bond, (2, 2, 2, 2))
+            H_bond = -self.J * backend.kron(self.sigma_x, self.sigma_x) - gL * backend.kron(self.sigma_z, self.eye) - gR * backend.kron(self.eye, self.sigma_z)
+            return backend.reshape(H_bond, (2, 2, 2, 2))
         H_bonds = []
         for i in range(2 * Lx - 1):
             if i%2 == 0:
@@ -122,7 +122,7 @@ class TFI(model.Model):
         sx_list = utility.compute_op_list(2*Lx*Ly, self.sigma_x)
         sz_list = utility.compute_op_list(2*Lx*Ly, self.sigma_z)
         D = 2**(2*Lx*Ly)
-        H = np.zeros((D, D))
+        H = backend.zeros((D, D))
         # Add the sigma_z contributions
         for i in range(2*Lx*Ly):
             H -= self.g * sz_list[i]
@@ -176,8 +176,8 @@ class TFI(model.Model):
             gL = self.g / connections_left
             gR = self.g / connections_right
             #print(f"Creating bond op with {(connections_left, connections_right)} connections, g = {(gL, gR)}")
-            H_bond = -self.J * np.kron(self.sigma_x, self.sigma_x) - gL * np.kron(self.sigma_z, self.eye) - gR * np.kron(self.eye, self.sigma_z)
-            return np.reshape(H_bond, (2, 2, 2, 2))
+            H_bond = -self.J * backend.kron(self.sigma_x, self.sigma_x) - gL * backend.kron(self.sigma_z, self.eye) - gR * backend.kron(self.eye, self.sigma_z)
+            return backend.reshape(H_bond, (2, 2, 2, 2))
         H_bonds = []
         for i in range(2 * Lx - 1):
             if i%2 == 0:

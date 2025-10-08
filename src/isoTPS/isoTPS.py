@@ -1,6 +1,6 @@
-import numpy as np
 from ..utility import debug_logging
 from ..utility import utility
+from ..utility import backend
 from . import shifting_ortho_center
 import h5py
 
@@ -262,7 +262,7 @@ class isoTPS:
 
         Parameters
         ----------
-        states : list of np.ndarray of shape (d,)
+        states : list of backend.array_type of shape (d,)
             list of local states. The full many-body state is formed by the kronecker product of all states in the list.
         """
         raise NotImplementedError("function initialize_product_state() is not implemented in isoTPS base class!")
@@ -272,28 +272,28 @@ class isoTPS:
         Initializes the isoTPS tensors in a product state consisting of S=1/2 spins pointing up
         """
         assert(self.d == 2)
-        self.initialize_product_state([np.array([1.0, 0.0], dtype=np.complex128)] * len(self.Ts))
+        self.initialize_product_state([backend.array([1.0, 0.0], dtype=backend.dtype_complex)] * len(self.Ts))
 
     def initialize_spindown(self):
         """
         Initializes the isoTPS tensors in a product state consisting of S=1/2 spins pointing down
         """
         assert(self.d == 2)
-        self.initialize_product_state([np.array([0.0, 1.0], dtype=np.complex128)] * len(self.Ts))
+        self.initialize_product_state([backend.array([0.0, 1.0], dtype=backend.dtype_complex)] * len(self.Ts))
 
     def initialize_spinright(self):
         """
         Initializes the isoTPS tensors in a product state consisting of S=1/2 spins pointing to the right
         """
         assert(self.d == 2)
-        self.initialize_product_state([np.array([1.0, 1.0], dtype=np.complex128)/np.sqrt(2.0)] * len(self.Ts))
+        self.initialize_product_state([backend.array([1.0, 1.0], dtype=backend.dtype_complex)/backend.sqrt(2.0)] * len(self.Ts))
 
     def initialize_spinleft(self):
         """
         Initializes the isoTPS tensors in a product state consisting of S=1/2 spins pointing to the left
         """
         assert(self.d == 2)
-        self.initialize_product_state([np.array([1.0, -1.0], dtype=np.complex128)/np.sqrt(2.0)] * len(self.Ts))
+        self.initialize_product_state([backend.array([1.0, -1.0], dtype=backend.dtype_complex)/backend.sqrt(2.0)] * len(self.Ts))
 
     def initialize_random_spin_half_product_state(self):
         """
@@ -302,8 +302,8 @@ class isoTPS:
         assert(self.d == 2)
         state = []
         for i in range(len(self.Ts)):
-            local_state = np.random.random(self.d) + 1.j * np.random.random(self.d)
-            local_state /= np.linalg.norm(local_state)
+            local_state = backend.random(self.d) + 1.j * backend.random(self.d)
+            local_state /= backend.norm(local_state)
             state.append(local_state)
         self.initialize_product_state(state)
 

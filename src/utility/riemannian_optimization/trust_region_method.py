@@ -1,3 +1,4 @@
+from .. import backend
 import numpy as np
 
 """
@@ -82,16 +83,16 @@ class TrustRegionOptimizer:
         ----------
         iterate : instance of iterate class
             the current iterate.
-        gradient : np.ndarray
+        gradient : backend.array_type
             the gradient of the cost function at the current iterate
         Delta : float
             the trust-region radius
 
         Returns
         -------
-        eta : np.ndarray
+        eta : backend.array_type
             the tangent vector approximately solving the trust-region subproblem
-        Heta : np.ndarray
+        Heta : backend.array_type
             hessian vector product of eta
         N_iters_tCG : int
             number of iterations the subproblem solver was run for        
@@ -105,7 +106,7 @@ class TrustRegionOptimizer:
         # Initial search direction
         r = gradient
         r_r = self.manifold.inner_product(r, r)
-        norm_r_0 = np.sqrt(r_r) # necessary for resiudal stopping criterion
+        norm_r_0 = backend.sqrt(r_r) # necessary for resiudal stopping criterion
         delta = -r
         delta_delta = self.manifold.inner_product(delta, delta)
         eta_delta = self.manifold.inner_product(eta, delta) # TODO: Is this necessary? eta is the zero vector ...
@@ -128,11 +129,11 @@ class TrustRegionOptimizer:
             # Compute curvature
             kappa = self.manifold.inner_product(delta, Hdelta)
             # Check if the curvature is negative
-            if kappa <= 0 or np.isnan(kappa) or np.isinf(kappa):
+            if kappa <= 0 or backend.isnan(kappa) or backend.isinf(kappa):
                 # Curvature is negative -> Go as far as we can in the current update direction, ie. to the trust-region border.
                 # Thus, we need to find tau such that ||eta + tau * delta|| = Delta. We can find such a tau by solving
                 # for the positive root of a simple quadratic equation
-                tau = (eta_delta + np.sqrt(eta_delta**2 + delta_delta * (Delta**2 - eta_eta))) / delta_delta
+                tau = (eta_delta + backend.sqrt(eta_delta**2 + delta_delta * (Delta**2 - eta_eta))) / delta_delta
                 # Update eta
                 eta = eta + tau * delta
                 # Compute new eta. This is cheap, but only an approximation if the approximate Hessian is non-linear!
@@ -150,7 +151,7 @@ class TrustRegionOptimizer:
                 # Go as far as we can in the current update direction, ie. to the trust-region border.
                 # Thus, we need to find tau such that ||eta + tau * delta|| = Delta. We can find such a tau by solving
                 # for the positive root of a simple quadratic equation
-                tau = (eta_delta + np.sqrt(eta_delta**2 + delta_delta * (Delta**2 - eta_eta))) / delta_delta
+                tau = (eta_delta + backend.sqrt(eta_delta**2 + delta_delta * (Delta**2 - eta_eta))) / delta_delta
                 # Update eta
                 eta = eta + tau * delta
                 # Compute new eta. This is cheap, but only an approximation if the approximate Hessian is non-linear!
@@ -181,7 +182,7 @@ class TrustRegionOptimizer:
             if r_r == 0.0:
                 N_iters_tCG = j+1
                 break
-            norm_r = np.sqrt(r_r)
+            norm_r = backend.sqrt(r_r)
             # Check the theta/kappa stopping criterion from the book, in order to achieve superlinear convergence
             if j >= self.min_inner and r_r <= norm_r_0 * min(norm_r_0**self.theta_stop, self.kappa_stop):
                 # resiudal is small enough, and we can quit
@@ -216,13 +217,13 @@ class TrustRegionOptimizer:
 
         Returns
         -------
-        final_iterate : np.ndarray 
+        final_iterate : backend.array_type 
             the final iterate
         num_iters : int
             the number of iterations the algorithm was run for
         debug_info : tuple
             tuple with debug information, containing four lists: A list of costs (float), a list of trust-region radii (float),
-            a list of tCG iteration counts (int) and a list of iterates (np.ndarray). If log_debug_info == False or 
+            a list of tCG iteration counts (int) and a list of iterates (backend.array_type). If log_debug_info == False or 
             log_iterates == False, the corresponding entries in the tuple are None.
         """
         iterate = initial_iterate
@@ -274,19 +275,19 @@ class TrustRegionOptimizer:
             try:
                 rho = rho_numerator / rho_denominator
             except ZeroDivisionError:
-                rho = np.nan
+                rho = backend.nan
                 print("[WARNING]: Division by zero occurred in trust-region method. This should not happen.")
 
             # Now, we choose the new trust-region radius based on the models performance
             # if the actual decrease is smaller than 1/4 of the predicted decrease, then reduce the TR radius!
-            if rho < 1.0/4.0 or not model_decreased or np.isnan(rho):
+            if rho < 1.0/4.0 or not model_decreased or backend.isnan(rho):
                 Delta = Delta / 4
                 if print_warnings:
                     consecutive_Delta_changes_plus = 0
                     consecutive_Delta_changes_minus += 1
                     if consecutive_Delta_changes_minus >= 5:
                         print("[WARNING]: Detected many consecutive TR radius decreases. Consider decreasing Delta0 by an order of magnitude.")
-                        consecutive_Delta_changes_minus = -np.inf
+                        consecutive_Delta_changes_minus = -backend.inf
             # If the actual decrease is at least 3/4 of the predicted decrease and the trust-region subproblem solver
             # hit the boundary of the trust-region, increase the TR radius
             elif rho > 3.0/4.0 and hit_delta:
@@ -296,7 +297,7 @@ class TrustRegionOptimizer:
                     consecutive_Delta_changes_minus = 0
                     if consecutive_Delta_changes_plus >= 5:
                         print("[WARNING]: Detected many consecutive TR radius increases. Consider increasing Delta_max by an order of magnitude.")
-                        consecutive_Delta_changes_minus = -np.inf
+                        consecutive_Delta_changes_minus = -backend.inf
             # Otherwise we keep the TR radius constant
             else:
                 if print_warnings:
@@ -307,8 +308,8 @@ class TrustRegionOptimizer:
             if model_decreased and rho > self.rho_prime:
                 # accept the proposed update
                 iterate = proposed_iterate
-                if not np.isclose(cost, 0):
-                    relative_cost_diff = (cost - proposed_cost) / np.abs(cost)
+                if not backend.isclose(cost, 0):
+                    relative_cost_diff = (cost - proposed_cost) / backend.abs(cost)
                 else:
                     relative_cost_diff = None
                 cost = proposed_cost
@@ -325,7 +326,7 @@ class TrustRegionOptimizer:
                 iterates.append(iterate.get_iterate())
             
             # Check for stopping criterion
-            if gradient_norm < self.min_gradient_norm or Delta < self.min_Delta or (relative_cost_diff is not None and np.abs(relative_cost_diff) < self.min_relative_cost_diff):
+            if gradient_norm < self.min_gradient_norm or Delta < self.min_Delta or (relative_cost_diff is not None and backend.abs(relative_cost_diff) < self.min_relative_cost_diff):
                 break
 
         return iterate.get_iterate(), n, (costs, Deltas, N_iters_tCG_list, iterates)

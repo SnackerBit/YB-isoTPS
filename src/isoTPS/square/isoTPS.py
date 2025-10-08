@@ -1,8 +1,8 @@
-import numpy as np
 import time
 import h5py
 import matplotlib.pyplot as plt
 from ...utility import utility
+from ...utility import backend
 from ...utility import debug_logging
 from . import yang_baxter_move
 from . import expectation_values
@@ -39,23 +39,23 @@ class isoTPS_Square(isoTPS.isoTPS):
 
         Parameters
         ----------
-        states : list of np.ndarray of shape (d,)
+        states : list of backend.array_type of shape (d,)
             list of local states. The full many-body state is formed by the kronecker product of all states in the list.
         """
         # Temporarily set debug level to zero to avoid collecting unnecessary debug information during initialization
         temp_debug_logger = self.debug_logger
         self.debug_logger = debug_logging.DebugLogger()
-        def _initialize_T_product_state(state=None, dtype=np.complex128):
+        def _initialize_T_product_state(state=None, dtype=backend.dtype_complex):
             if state is None:
-                state = np.zeros((self.d), dtype=np.complex128)
+                state = backend.zeros((self.d), dtype=backend.dtype_complex)
                 state[0] = 1.0
-            T = np.zeros((state.size, 1, 1, 1, 1), dtype=np.complex128)
+            T = backend.zeros((state.size, 1, 1, 1, 1), dtype=backend.dtype_complex)
             T[:, 0, 0, 0, 0] = state[:]
             return T
         # First, initialize the ortho center, which is to the right of all T tensors
         self.ortho_surface = 2 * self.Lx - 1
         for i in range(2 * self.Ly - 1):
-            self.Ws[i] = np.array([[[[1.]]]], dtype=np.complex128)
+            self.Ws[i] = backend.array([[[[1.]]]], dtype=backend.dtype_complex)
         # We go from right to left, initializing the T tensors in product states and moving the ortho surface left
         for x in range(self.Lx - 1, -1, -1):
             for y in range(self.Ly):
@@ -99,16 +99,16 @@ class isoTPS_Square(isoTPS.isoTPS):
 
         if T_colors is None:
             # Default color: bright blue
-            T_colors = [np.array([31, 119, 180]) / 255] * self.Lx * self.Ly * 2
+            T_colors = [backend.array([31, 119, 180]) / 255] * self.Lx * self.Ly * 2
 
         # Helper function for drawing labelled arrows
         def construct_labelled_arrow(start, direction, label, labelPos="upper left", color="black"):
             dx_2 = direction[0] / 2
             dy_2 = direction[1] / 2
             delta_l = 0.025
-            alpha = np.arctan(dx_2/dy_2)
-            ddx = np.sin(alpha) * delta_l
-            ddy = np.cos(alpha) * delta_l
+            alpha = backend.arctan(dx_2/dy_2)
+            ddx = backend.sin(alpha) * delta_l
+            ddy = backend.cos(alpha) * delta_l
             ax.arrow(start[0], start[1], dx_2 + ddx, dy_2 + ddy, head_width=0.05, head_length=0.05, color=color)
             ax.arrow(start[0] + dx_2 + ddx, start[1] + dy_2 + ddy, dx_2 - ddx, dy_2 - ddy, head_width=0, color=color)
             if show_bond_dims:
@@ -229,8 +229,8 @@ class isoTPS_Square(isoTPS.isoTPS):
                 for p in [0, 1]:
                     T = self.Ts[self.get_index(x, y, p)]
                     if 2 * x < self.ortho_surface or p == 0 and 2 * x == self.ortho_surface:
-                        T = np.transpose(T, (0, 3, 4, 1, 2)) # p ru rd ld lu -> p ld lu ru rd
-                    T = np.reshape(T, (T.shape[0]*T.shape[1]*T.shape[2], T.shape[3]*T.shape[4]))
+                        T = backend.transpose(T, (0, 3, 4, 1, 2)) # p ru rd ld lu -> p ld lu ru rd
+                    T = backend.reshape(T, (T.shape[0]*T.shape[1]*T.shape[2], T.shape[3]*T.shape[4]))
                     if not utility.check_isometry(T):
                         print(f"T tensor at (x={x}, y={y}, p={p}) is not an isometry ...")
                         success = False
@@ -238,12 +238,12 @@ class isoTPS_Square(isoTPS.isoTPS):
         for i in range(len(self.Ws)):
             W = self.Ws[i]
             if i < self.ortho_center:
-                W = np.transpose(W, (0, 2, 3, 1)) # l u r d -> l r d u
+                W = backend.transpose(W, (0, 2, 3, 1)) # l u r d -> l r d u
             elif i > self.ortho_center:
-                W = np.transpose(W, (0, 2, 1, 3)) # l u r d -> l r u d
+                W = backend.transpose(W, (0, 2, 1, 3)) # l u r d -> l r u d
             else:
                 continue
-            W = np.reshape(W, (W.shape[0]*W.shape[1]*W.shape[2], W.shape[3]))
+            W = backend.reshape(W, (W.shape[0]*W.shape[1]*W.shape[2], W.shape[3]))
             if not utility.check_isometry(W):
                 print(f"W tensor at index  {i} is not an isometry ...")
                 success = False
@@ -635,15 +635,15 @@ class isoTPS_Square(isoTPS.isoTPS):
 
         Returns
         -------
-        T1 : np.ndarray of shape (i, ru1, rd1, ld1, lu1)
+        T1 : backend.array_type of shape (i, ru1, rd1, ld1, lu1)
             part of the twosite wavefunction
-        T2 : np.ndarray of shape (j, ru2, rd2, ld2, lu2)
+        T2 : backend.array_type of shape (j, ru2, rd2, ld2, lu2)
             part of the twosite wavefunction
-        Wm1 : np.ndarray of shape (lm1, um1, rm1, dm1) = (rd1, d, rm1, dm1) or None
+        Wm1 : backend.array_type of shape (lm1, um1, rm1, dm1) = (rd1, d, rm1, dm1) or None
             part of the twosite wavefunction
-        W : np.ndarray of shape (l, u, r, d) = (ru1, u, ld2, d)
+        W : backend.array_type of shape (l, u, r, d) = (ru1, u, ld2, d)
             part of the twosite wavefunction
-        Wp1 : np.ndarray of shape (lp1, up1, rp1, dp1) = (lp1, up1, lu2, u) or None
+        Wp1 : backend.array_type of shape (lp1, up1, rp1, dp1) = (lp1, up1, lu2, u) or None
             part of the twosite wavefunction
         """
         x = self.ortho_surface // 2
@@ -697,7 +697,7 @@ class isoTPS_Square(isoTPS.isoTPS):
 
         Parameters
         ----------
-        T1, T2, Wm1, W, Wp1: np.ndarray or None
+        T1, T2, Wm1, W, Wp1: backend.array_type or None
             twosite wavefunction. For the shapes of the individual tensors, see get_environment_twosite().
         """
         x = self.ortho_surface // 2
@@ -768,11 +768,11 @@ class isoTPS_Square(isoTPS.isoTPS):
 
         Returns
         -------
-        T : np.ndarray of shape (i, ru, rd, ld, lu)
+        T : backend.array_type of shape (i, ru, rd, ld, lu)
             part of the onesite wavefunction
-        W : np.ndarray of shape (l, u, r, d) = (rd, u, r, d) or None
+        W : backend.array_type of shape (l, u, r, d) = (rd, u, r, d) or None
             part of the onesite wavefunction
-        Wp1 : np.ndarray of shape (lp1, up1, rp1, dp1) = (ru, up1, rp1, u) or None
+        Wp1 : backend.array_type of shape (lp1, up1, rp1, dp1) = (ru, up1, rp1, u) or None
             part of the onesite wavefunction
         """
 
@@ -850,7 +850,7 @@ class isoTPS_Square(isoTPS.isoTPS):
 
         Parameters
         ----------
-        ops : list of np.ndarray of shape (self.d, self.d)
+        ops : list of backend.array_type of shape (self.d, self.d)
             list of one-site operators. At each site, an expectation value is computed from each of
             the operators in the list
         
@@ -883,7 +883,7 @@ class isoTPS_Square(isoTPS.isoTPS):
         
         Parameters
         ----------
-        ops: list of np.ndarray of shape (self.d, self.d, self.d, self.d) = (i, j, i, j)
+        ops: list of backend.array_type of shape (self.d, self.d, self.d, self.d) = (i, j, i, j)
             list of twosite operators. At each bond, the expectation value of the corresponding operator
             is computed. In total, ops should have length len(ops) == (2 * Ly - 1) * (2 * Lx - 1) = N_bonds
 
@@ -906,14 +906,14 @@ class isoTPS_Square(isoTPS.isoTPS):
 
         Parameters
         ----------
-        U_bonds : list of np.ndarray of shape (i, j, i*, j*)
+        U_bonds : list of backend.array_type of shape (i, j, i*, j*)
             list of time evolution bond operators
 
         Returns
         -------
         error : float
             the error of the local TEBD update. If self.debug_logger.log_approximate_column_error_tebd == False,
-            -np.float("inf") is returned instead.
+            -backend.float("inf") is returned instead.
         """
         # determine index into U_bonds
         index = self.ortho_surface * (2 * self.Ly - 1) + self.ortho_center
@@ -927,7 +927,7 @@ class isoTPS_Square(isoTPS.isoTPS):
             start = time.time()
         # perform TEBD step
         T1, T2, Wm1, W, Wp1, error = tebd.tebd_step(T1, T2, Wm1, W, Wp1, U_bonds[index], self.chi_max, debug_logger=self.debug_logger, **self.tebd_options)
-        error = np.real_if_close(error)
+        error = backend.real_if_close(error)
         # log error and walltimes
         if self.debug_logger.log_algorithm_walltimes or self.debug_logger.log_local_tebd_update_walltimes:
             end = time.time()
@@ -958,7 +958,7 @@ class isoTPS_Square(isoTPS.isoTPS):
 
         Parameters
         ----------
-        U_bonds : list of np.ndarray of shape (i, j, i*, j*)
+        U_bonds : list of backend.array_type of shape (i, j, i*, j*)
             list of time evolution bond operators
         """
         # apply update on even bonds
@@ -1000,7 +1000,7 @@ class isoTPS_Square(isoTPS.isoTPS):
 
         Parameters
         ----------
-        U_bonds : list of np.ndarray of shape (i, j, i*, j*)
+        U_bonds : list of backend.array_type of shape (i, j, i*, j*)
             list of time evolution bond operators
         move_upwards : bool, optional
             if set to true, operators are applied from the bottom up, otherwise they are applied
@@ -1027,7 +1027,7 @@ class isoTPS_Square(isoTPS.isoTPS):
 
         Parameters
         ----------
-        U_bonds : list of np.ndarray of shape (i, j, i*, j*)
+        U_bonds : list of backend.array_type of shape (i, j, i*, j*)
             list of real or imaginary time evolution bond operators of time dtau.
         N_steps : int
             number of TEBD steps performed
@@ -1061,7 +1061,7 @@ class isoTPS_Square(isoTPS.isoTPS):
 
         Parameters
         ----------
-        U_bonds : list of np.ndarray of shape (i, j, i*, j*)
+        U_bonds : list of backend.array_type of shape (i, j, i*, j*)
             list of real or imaginary time evolution bond operators of time dtau/2.
         N_steps : int
             number of TEBD steps performed
@@ -1088,13 +1088,13 @@ class isoTPS_Square(isoTPS.isoTPS):
 
         Returns
         -------
-        S : np.ndarray of shape (chi)
+        S : backend.array_type of shape (chi)
             singular values
         """
         assert(self.ortho_center < len(self.Ws) - 1)
-        contr = np.tensordot(self.Ws[self.ortho_center], self.Ws[self.ortho_center + 1], ([1], [3])) # l [u] r d; lp1 up1 rp1 [dp1] -> l r d lp1 up1 rp1
+        contr = backend.tensordot(self.Ws[self.ortho_center], self.Ws[self.ortho_center + 1], ([1], [3])) # l [u] r d; lp1 up1 rp1 [dp1] -> l r d lp1 up1 rp1
         l, r, d, lp1, up1, rp1 = contr.shape
-        contr = np.reshape(contr, (l*r*d, lp1*up1*rp1)) # l, r, d, lp1, up1, rp1 -> (l, r, d), (lp1, up1, rp1)
+        contr = backend.reshape(contr, (l*r*d, lp1*up1*rp1)) # l, r, d, lp1, up1, rp1 -> (l, r, d), (lp1, up1, rp1)
         _, S, _ = utility.safe_svd(contr)
         return S
 
@@ -1105,7 +1105,7 @@ class isoTPS_Square(isoTPS.isoTPS):
 
         Returns
         -------
-        Ss : list of np.ndarray
+        Ss : list of backend.array_type
             list containing the singular values between the orthogonality center and the tensor one above the 
         orthogonality center for all possible positions. len(Ss) = (2*self.Lx - 1) * (2 * self.Ly - 2).
         """
@@ -1140,43 +1140,43 @@ class isoTPS_Square(isoTPS.isoTPS):
         self.move_to(0, 0)
         # begin building the psi tensor by contracting leftmost T-tensors with the ortho surface
         T_index = self.get_index(0, 0, 0)
-        psi = np.tensordot(self.Ts[T_index][state[T_index], :, 0, 0, 0], self.Ws[0][:, :, :, 0], ([0], [0])) # [ru]; [l] u r -> u r_1
-        psi = np.tensordot(psi, self.Ws[1], ([0], [3])) # [u] r_1; l u r [d] -> r_1 l u r_2
+        psi = backend.tensordot(self.Ts[T_index][state[T_index], :, 0, 0, 0], self.Ws[0][:, :, :, 0], ([0], [0])) # [ru]; [l] u r -> u r_1
+        psi = backend.tensordot(psi, self.Ws[1], ([0], [3])) # [u] r_1; l u r [d] -> r_1 l u r_2
         for y in range(1, self.Ly - 1):
             T_index = self.get_index(0, y, 0)
-            psi = np.tensordot(psi, self.Ts[T_index][state[T_index], :, :, 0, 0], ([-3], [1])) # r_1 ... r_{i-1} [l] u r_i; ru [rd] -> r_1 ... r_{i-1} u r_i ru
-            psi = np.tensordot(psi, self.Ws[2*y], ([-3, -1], [3, 0])) #r_1 ... r_{i-1} [u] r_i [ru]; [l] u r [d] -> r_1 ... r_{i-1} r_i u r_{i+1}
-            psi = np.tensordot(psi, self.Ws[2*y+1], ([-2], [3])) # r_1 ... r_{i-1} r_i [u] r_{i+1}; l u r [d] -> r_1 ... r_{i+1} l u r_{i+2}
+            psi = backend.tensordot(psi, self.Ts[T_index][state[T_index], :, :, 0, 0], ([-3], [1])) # r_1 ... r_{i-1} [l] u r_i; ru [rd] -> r_1 ... r_{i-1} u r_i ru
+            psi = backend.tensordot(psi, self.Ws[2*y], ([-3, -1], [3, 0])) #r_1 ... r_{i-1} [u] r_i [ru]; [l] u r [d] -> r_1 ... r_{i-1} r_i u r_{i+1}
+            psi = backend.tensordot(psi, self.Ws[2*y+1], ([-2], [3])) # r_1 ... r_{i-1} r_i [u] r_{i+1}; l u r [d] -> r_1 ... r_{i+1} l u r_{i+2}
         # Contract psi tensor with final T and W tensor
         T_index = self.get_index(0, self.Ly-1, 0)
-        psi = np.tensordot(psi, self.Ts[T_index][state[T_index], :, :, 0, 0], ([-3], [1])) # r_1 ... r_{i-1} [l] u r_i; ru [rd] -> r_1 ... r_{i-1} u r_i ru
-        psi = np.tensordot(psi, self.Ws[2*self.Ly-2][:, 0, :, :], ([-3, -1], [2, 0])) #r_1 ... r_{i-1} [u] r_i [ru]; [l] r [d] -> r_1 ... r_{N-2} r_{N-1} r_N
+        psi = backend.tensordot(psi, self.Ts[T_index][state[T_index], :, :, 0, 0], ([-3], [1])) # r_1 ... r_{i-1} [l] u r_i; ru [rd] -> r_1 ... r_{i-1} u r_i ru
+        psi = backend.tensordot(psi, self.Ws[2*self.Ly-2][:, 0, :, :], ([-3, -1], [2, 0])) #r_1 ... r_{i-1} [u] r_i [ru]; [l] r [d] -> r_1 ... r_{N-2} r_{N-1} r_N
         # Now go from left to right and contract everything with the psi tensor column after column, except for the final column
         x = 0
         for _ in range(self.Lx - 1):
             # Contract with p=1 tensors, going from top to bottom. The first tensor is special
             T_index = self.get_index(x, self.Ly-1, 1)
-            psi = np.tensordot(self.Ts[T_index][state[T_index], 0, :, :, 0], psi, ([1], [-1])) # rd [ld]; r_1 ... r_{N-1} [r_{N}] -> r_N r_1 ... r_{N-1}
+            psi = backend.tensordot(self.Ts[T_index][state[T_index], 0, :, :, 0], psi, ([1], [-1])) # rd [ld]; r_1 ... r_{N-1} [r_{N}] -> r_N r_1 ... r_{N-1}
             for y in range(self.Ly - 2, -1, -1):
                 T_index = self.get_index(x, y, 1)
                 T = self.Ts[T_index][state[T_index], :, :, :, :].transpose(1, 0, 2, 3) # ru, rd, ld, lu -> rd, ru, ld, lu
-                psi = np.tensordot(T, psi, ([2, 3], [-2, -1])) # rd ru [ld] [lu]; r_{i+1} r_{i+2} ... r_{N-1} r_N r_1 ... [r_{i-1}] [r_i] -> r_{i-1} r_i r_{i+1} ... r_N r_1 ... r_{i-2}
+                psi = backend.tensordot(T, psi, ([2, 3], [-2, -1])) # rd ru [ld] [lu]; r_{i+1} r_{i+2} ... r_{N-1} r_N r_1 ... [r_{i-1}] [r_i] -> r_{i-1} r_i r_{i+1} ... r_N r_1 ... r_{i-2}
             # After this for-loop, the psi tensor has again shape r_1 r_2 ... r_N
             x += 1
             # Now, contract with p=0 tensors, going from top to bottom. The last tensor is special
             for y in range(self.Ly - 1, 0, -1):
                 T_index = self.get_index(x, y, 0)
                 T = self.Ts[T_index][state[T_index], :, :, :, :].transpose(1, 0, 2, 3) # ru, rd, ld, lu -> rd, ru, ld, lu
-                psi = np.tensordot(T, psi, ([2, 3], [-2, -1])) # rd ru [ld] [lu]; r_{i+1} r_{i+2} ... r_{N-1} r_N r_1 ... [r_{i-1}] [r_i] -> r_{i-1} r_i r_{i+1} ... r_N r_1 ... r_{i-2}
+                psi = backend.tensordot(T, psi, ([2, 3], [-2, -1])) # rd ru [ld] [lu]; r_{i+1} r_{i+2} ... r_{N-1} r_N r_1 ... [r_{i-1}] [r_i] -> r_{i-1} r_i r_{i+1} ... r_N r_1 ... r_{i-2}
             # last tensor is special
             T_index = self.get_index(x, 0, 0)
             T = self.Ts[T_index][state[T_index], :, 0, 0, :] # ru, lu
-            psi = np.tensordot(T, psi, ([1], [-1])) # r_1 [l_1]; r_2 ... r_N [r_1] -> r_1 r_2 ... r_N 
+            psi = backend.tensordot(T, psi, ([1], [-1])) # r_1 [l_1]; r_2 ... r_N [r_1] -> r_1 r_2 ... r_N 
         # Contract with the final column of p=1 tensors, from bottom to top
         for y in range(self.Ly - 1):
             T_index = self.get_index(x, y, 1)
-            psi = np.tensordot(psi, self.Ts[T_index][state[T_index], 0, 0, :, :], ([0, 1], [0, 1])) # [ld] [lu]; r_{i-1} r_{i} r_{i+1} ... r_N -> r_{i+1} r_{i+2} ... r_N
+            psi = backend.tensordot(psi, self.Ts[T_index][state[T_index], 0, 0, :, :], ([0, 1], [0, 1])) # [ld] [lu]; r_{i-1} r_{i} r_{i+1} ... r_N -> r_{i+1} r_{i+2} ... r_N
         # Last tensor is special
         T_index = self.get_index(x, self.Ly - 1, 1)
-        psi = np.tensordot(self.Ts[T_index][state[T_index], 0, 0, :, 0], psi, ([0], [0])) # [ld]; [r_N]
+        psi = backend.tensordot(self.Ts[T_index][state[T_index], 0, 0, :, 0], psi, ([0], [0])) # [ld]; [r_N]
         return psi.item()

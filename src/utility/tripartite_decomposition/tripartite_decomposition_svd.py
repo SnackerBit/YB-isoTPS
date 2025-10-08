@@ -1,4 +1,4 @@
-import numpy as np
+from .. import backend
 from .. import utility
 from ..disentangle import disentangle as disentangle_lib
 from .. import debug_logging
@@ -9,7 +9,7 @@ def tripartite_decomposition(T, D1, D2, chi, N_iters_svd=None, eps_svd=0.0, dise
 
     Parameters
     ----------
-    T : np.ndarray of shape (chi_1, chi_2, chi_3)
+    T : backend.array_tpye of shape (chi_1, chi_2, chi_3)
         the tensor that is to be decomposed.
     D1 : int
         bond dimension of the leg connecting the A and B tensor.
@@ -32,21 +32,21 @@ def tripartite_decomposition(T, D1, D2, chi, N_iters_svd=None, eps_svd=0.0, dise
 
     Returns
     -------
-    A : np.ndarray of shape (chi_1, D1, D2)
+    A : backend.array_tpye of shape (chi_1, D1, D2)
         resulting A tensor, isometry along (chi_1, (D1, D2))
-    B : np.ndarray of shape (D1, chi_2, chi)
+    B : backend.array_tpye of shape (D1, chi_2, chi)
         resulting B tensor, isometry along ((D1, chi_2), chi)
-    C : np.ndarray of shape (D2, chi, chi_3)
+    C : backend.array_tpye of shape (D2, chi, chi_3)
         resulting C tensor, normalized.
     """
     chi_1, chi_2, chi_3 = T.shape
-    A = np.reshape(T, (chi_1, chi_2*chi_3))
+    A = backend.reshape(T, (chi_1, chi_2*chi_3))
     if N_iters_svd is None:
         A, theta = utility.split_matrix_svd(A, D1*D2)
     else:
         A, theta, _, _ = utility.split_matrix_iterate_QR(A, D1*D2, N_iters_svd, eps_svd)
-    A = np.reshape(A, (chi_1, D1, D2))
-    theta = np.reshape(theta, (D1, D2, chi_2, chi_3)) # (D1, D2), (chi_2, chi_3) -> D1, D2, chi_2, chi_3
+    A = backend.reshape(A, (chi_1, D1, D2))
+    theta = backend.reshape(theta, (D1, D2, chi_2, chi_3)) # (D1, D2), (chi_2, chi_3) -> D1, D2, chi_2, chi_3
     # Check if the tripartite decomposition can be performed without error, in which case we don't need to disentangle
     if D1*chi_2 == chi:
         disentangle = False
@@ -55,10 +55,10 @@ def tripartite_decomposition(T, D1, D2, chi, N_iters_svd=None, eps_svd=0.0, dise
         theta = theta.transpose(2, 0, 1, 3) # D1, D2, chi_2, chi_3 -> chi_2, D_1, D_2, chi_3
         U = disentangle_lib.disentangle(theta, debug_logger=debug_logger, chi=chi, **disentangle_options)
         # Apply U to W
-        theta = np.tensordot(U, theta, ([2, 3], [1, 2])) # D1 D2 [D1*] [D2*]; chi_2 [D1] [D2] chi_3 -> D1 D2 chi_2 chi_3
+        theta = backend.tensordot(U, theta, ([2, 3], [1, 2])) # D1 D2 [D1*] [D2*]; chi_2 [D1] [D2] chi_3 -> D1 D2 chi_2 chi_3
         theta = theta.transpose((0, 2, 1, 3)) # D1, D2, chi_2, chi_3 -> D1, chi_2, D2, chi_3
         # Contract A with U^\dagger
-        A = np.tensordot(A, np.conj(U), ([1, 2], [2, 3])) # chi_1 [D1] [D2]; D1* D2* [D1] [D2] -> chi_1 D1 D2
+        A = backend.tensordot(A, backend.conj(U), ([1, 2], [2, 3])) # chi_1 [D1] [D2]; D1* D2* [D1] [D2] -> chi_1 D1 D2
     else:
         theta = theta.transpose(0, 2, 1, 3) # D1, D2, chi_2, chi_3 -> D1, chi_2, D2, chi_3
     # Split the theta tensor into B and C

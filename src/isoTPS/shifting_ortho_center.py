@@ -1,5 +1,5 @@
-import numpy as np
 from ..utility import utility
+from ..utility import backend
 
 def move_ortho_center_up(W_center, W, chi_max, options={"mode" : "svd"}):
     """
@@ -19,9 +19,9 @@ def move_ortho_center_up(W_center, W, chi_max, options={"mode" : "svd"}):
 
     Parameters
     ----------
-    W_center : np.ndarray of shape (l_c, u_c, r_c, d_c)
+    W_center : backend.array_type of shape (l_c, u_c, r_c, d_c)
        orthogonality center
-    W : np.ndarray of shape (l, u, r, d)
+    W : backend.array_type of shape (l, u, r, d)
        orthogonality hypersurface tensor right above the orthogonality center
     chi_max : int
        maximal bond dimension
@@ -34,9 +34,9 @@ def move_ortho_center_up(W_center, W, chi_max, options={"mode" : "svd"}):
 
     Returns
     -------
-    W : np.ndarray of shape (l_c, u_c, r_c, d_c)
+    W : backend.array_type of shape (l_c, u_c, r_c, d_c)
        orthogonality hypersurface tensor right below the new orthogonality center
-    W_center : np.ndarray of shape (l, u, r, d)
+    W_center : backend.array_type of shape (l, u, r, d)
        the new orthongonality center tensor
     """
     l_c, u_c, r_c, d_c = W_center.shape
@@ -47,7 +47,7 @@ def move_ortho_center_up(W_center, W, chi_max, options={"mode" : "svd"}):
     if "N_iters" in options:
         N_iters = options["N_iters"]
     Q, R = utility.split_matrix(W_center, min(W_center.shape[0], chi_max), mode, N_iters)
-    W_center = np.tensordot(W, R, ([3], [1])) # l u r [d]; u_c [u_c*] -> l u r u_c = l u r d
+    W_center = backend.tensordot(W, R, ([3], [1])) # l u r [d]; u_c [u_c*] -> l u r u_c = l u r d
     W = Q.reshape(l_c, r_c, d_c, -1).transpose(0, 3, 1, 2) # (l, r, d), u -> l, r, d, u -> l, u, r, d
     return W, W_center
 
@@ -69,9 +69,9 @@ def move_ortho_center_down(W, W_center, chi_max, options={"mode" : "svd"}):
 
     Parameters
     ----------
-    W : np.ndarray of shape (l, u, r, d)
+    W : backend.array_type of shape (l, u, r, d)
        orthogonality hypersurface tensor right below the orthogonality center
-    W_center : np.ndarray of shape (l_c, u_c, r_c, d_c)
+    W_center : backend.array_type of shape (l_c, u_c, r_c, d_c)
        orthogonality center
     chi_max : int
        maximal bond dimension
@@ -84,9 +84,9 @@ def move_ortho_center_down(W, W_center, chi_max, options={"mode" : "svd"}):
 
     Returns
     -------
-    W_center : np.ndarray of shape (l, u, r, d)
+    W_center : backend.array_type of shape (l, u, r, d)
        the new orthongonality center tensor
-    W : np.ndarray of shape (l_c, u_c, r_c, d_c)
+    W : backend.array_type of shape (l_c, u_c, r_c, d_c)
        orthogonality hypersurface tensor right above the new orthogonality center
     """
     l_c, u_c, r_c, d_c = W_center.shape
@@ -97,6 +97,6 @@ def move_ortho_center_down(W, W_center, chi_max, options={"mode" : "svd"}):
     if "N_iters" in options:
         N_iters = options["N_iters"]
     Q, R = utility.split_matrix(W_center, min(W_center.shape[0], chi_max), mode, N_iters)
-    W_center = np.tensordot(W, R, ([1], [1])).transpose(0, 3, 1, 2) # l [u] r d; d_c [d_c*] -> l r d d_c = l r d u -> l, u, r, d
+    W_center = backend.tensordot(W, R, ([1], [1])).transpose(0, 3, 1, 2) # l [u] r d; d_c [d_c*] -> l r d d_c = l r d u -> l, u, r, d
     W = Q.reshape(l_c, u_c, r_c, -1) # (l, u, r), d -> l, u, r, d
     return W_center, W

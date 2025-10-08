@@ -1,7 +1,7 @@
-import numpy as np
 import time
 import matplotlib.pyplot as plt
 from ...utility import utility
+from ...utility import backend
 from ...utility import debug_logging
 from . import yang_baxter_move
 from . import expectation_values
@@ -97,7 +97,7 @@ class isoTPS_Honeycomb(isoTPS.isoTPS):
 
         Parameters
         ----------
-        states : list of np.ndarray of shape (d,)
+        states : list of backend.array_type of shape (d,)
             list of local states. The full many-body state is formed by the kronecker product of all states in the list.
         """
         # Temporarily set debug level to zero to avoid printing unnecessary debug information during initialization
@@ -105,14 +105,14 @@ class isoTPS_Honeycomb(isoTPS.isoTPS):
         self.debug_level = debug_levels.DebugLevel.NO_DEBUG
         if self.debug_dict is not None:
             self.debug_dict["debug_level"] = self.debug_level
-        def initialize_T_product_state(state=np.array([1.0, 0.0], dtype=np.complex128)):
-            T = np.zeros((state.size, 1, 1, 1), dtype=np.complex128)
+        def initialize_T_product_state(state=backend.array([1.0, 0.0], dtype=backend.dtype_complex)):
+            T = backend.zeros((state.size, 1, 1, 1), dtype=backend.dtype_complex)
             T[:, 0, 0, 0] = state[:]
             return T
         # First, initialize the ortho center, which is to the right of all T tensors
         self.ortho_surface = 2 * self.Lx - 1
         for i in range(0, 2 * self.Ly - 1, 2):
-            self.Ws[i] = np.array([[[[1.]]]], dtype=np.complex128)
+            self.Ws[i] = backend.array([[[[1.]]]], dtype=backend.dtype_complex)
         # We go from right to left, initializing the T tensors in product states and moving the ortho surface left
         for x in range(self.Lx - 1, -1, -1):
             for y in range(self.Ly):
@@ -145,25 +145,25 @@ class isoTPS_Honeycomb(isoTPS.isoTPS):
         """
         scale = figsize_y / (4 * self.Ly)
         if ax is None:
-            fig, ax = plt.subplots(figsize=(2 * np.sqrt(3) * self.Lx * scale, 6 * self.Ly * scale))
+            fig, ax = plt.subplots(figsize=(2 * backend.sqrt(3) * self.Lx * scale, 6 * self.Ly * scale))
         ax.axis("equal")
-        #ax.set_xlim(-1, np.sqrt(3) * (self.Lx - 1 + 1/3) + 1)
+        #ax.set_xlim(-1, backend.sqrt(3) * (self.Lx - 1 + 1/3) + 1)
         #ax.set_ylim(-1, 2 * (self.Ly - 1) + (self.Lx - 1) + 1.5)
         ax.get_xaxis().set_visible(False)
         ax.get_yaxis().set_visible(False)
 
         if T_colors is None:
             # Default color: bright blue
-            T_colors = [np.array([31, 119, 180]) / 255] * self.Lx * self.Ly * 2
+            T_colors = [backend.array([31, 119, 180]) / 255] * self.Lx * self.Ly * 2
 
         # Helper function for drawing labelled arrows
         def construct_labelled_arrow(start, direction, label=None, labelPos="upper left", color="black"):
             dx_2 = direction[0] / 2
             dy_2 = direction[1] / 2
             delta_l = 0.025
-            alpha = np.arctan2(dx_2, dy_2)
-            ddx = np.sin(alpha) * delta_l
-            ddy = np.cos(alpha) * delta_l
+            alpha = backend.arctan2(dx_2, dy_2)
+            ddx = backend.sin(alpha) * delta_l
+            ddy = backend.cos(alpha) * delta_l
             ax.arrow(start[0], start[1], dx_2 + ddx, dy_2 + ddy, head_width=0.05, head_length=0.05, color=color)
             ax.arrow(start[0] + dx_2 + ddx, start[1] + dy_2 + ddy, dx_2 - ddx, dy_2 - ddy, head_width=0, color=color)
             if label is not None:
@@ -195,11 +195,11 @@ class isoTPS_Honeycomb(isoTPS.isoTPS):
                 ax.annotate(label, (start[0] + dx_2, start[1] + dy_2), xytext=labelCoords, textcoords='offset points', ha=ha)
 
         def compute_tensor_position_T(x, y, p):
-            return (np.sqrt(3) * (x + p/3), 2 * y + x + p)
+            return (backend.sqrt(3) * (x + p/3), 2 * y + x + p)
 
         def compute_tensor_position_W(x, y):
             p = x%2
-            return (np.sqrt(3) * (x//2 + (0.5/3) + p * (1/2)), x/2 + y + 0.5)
+            return (backend.sqrt(3) * (x//2 + (0.5/3) + p * (1/2)), x/2 + y + 0.5)
 
         # Draw arrows starting from each p = 0 tensor connecting to p = 1 tensors
         for x in range(self.Lx):
@@ -210,20 +210,20 @@ class isoTPS_Honeycomb(isoTPS.isoTPS):
                 if x > 0:
                     if 2*x > self.ortho_surface:
                         if self.ortho_surface != 2*x-1:
-                            construct_labelled_arrow(position, (-2*np.sqrt(3)/3, 0), str(l), labelPos="up")
+                            construct_labelled_arrow(position, (-2*backend.sqrt(3)/3, 0), str(l), labelPos="up")
                     else:
-                        construct_labelled_arrow((position[0] - 2*np.sqrt(3)/3, position[1]), (2*np.sqrt(3)/3, 0), str(l), labelPos="up")
+                        construct_labelled_arrow((position[0] - 2*backend.sqrt(3)/3, position[1]), (2*backend.sqrt(3)/3, 0), str(l), labelPos="up")
                 # "ru" leg
                 if 2*x < self.ortho_surface:
-                    construct_labelled_arrow(position, (np.sqrt(3)/3, 1), str(ru), labelPos="upper left")
+                    construct_labelled_arrow(position, (backend.sqrt(3)/3, 1), str(ru), labelPos="upper left")
                 elif 2*x > self.ortho_surface:
-                    construct_labelled_arrow((position[0] + np.sqrt(3)/3, position[1] + 1), (-np.sqrt(3)/3, -1), str(ru), labelPos="upper left")
+                    construct_labelled_arrow((position[0] + backend.sqrt(3)/3, position[1] + 1), (-backend.sqrt(3)/3, -1), str(ru), labelPos="upper left")
                 # "rd" leg
                 if y > 0:
                     if 2*x < self.ortho_surface:
-                        construct_labelled_arrow(position, (np.sqrt(3)/3, -1), str(rd), labelPos="upper right")
+                        construct_labelled_arrow(position, (backend.sqrt(3)/3, -1), str(rd), labelPos="upper right")
                     elif 2*x > self.ortho_surface:
-                        construct_labelled_arrow((position[0] + np.sqrt(3)/3, position[1] - 1), (-np.sqrt(3)/3, 1), str(rd), labelPos="upper right")
+                        construct_labelled_arrow((position[0] + backend.sqrt(3)/3, position[1] - 1), (-backend.sqrt(3)/3, 1), str(rd), labelPos="upper right")
                 # arrow for physical index
                 construct_labelled_arrow((position[0], position[1] + 0.4), (0, -0.4), str(self.Ts[self.get_index(x, y, 0)].shape[0]), labelPos="left", color="green")
                 position = compute_tensor_position_T(x, y, 1)
@@ -246,14 +246,14 @@ class isoTPS_Honeycomb(isoTPS.isoTPS):
                     construct_labelled_arrow((position[0], position[1] + 1), (0, -1), str(u), labelPos=labelPos, color="red")
                 # "l" leg
                 if y%2 == 0:
-                    construct_labelled_arrow((position[0]-1/2/np.sqrt(3), position[1] - 0.5), (1/2/np.sqrt(3), 0.5), str(l), labelPos="upper left")
+                    construct_labelled_arrow((position[0]-1/2/backend.sqrt(3), position[1] - 0.5), (1/2/backend.sqrt(3), 0.5), str(l), labelPos="upper left")
                 else:
-                    construct_labelled_arrow((position[0]-1/2/np.sqrt(3), position[1] + 0.5), (1/2/np.sqrt(3), -0.5), str(l), labelPos="lower left")
+                    construct_labelled_arrow((position[0]-1/2/backend.sqrt(3), position[1] + 0.5), (1/2/backend.sqrt(3), -0.5), str(l), labelPos="lower left")
                 # "r" leg
                 if y%2 == 0:
-                    construct_labelled_arrow((position[0]+1/2/np.sqrt(3), position[1] + 0.5), (-1/2/np.sqrt(3), -0.5), str(r), labelPos="lower right")
+                    construct_labelled_arrow((position[0]+1/2/backend.sqrt(3), position[1] + 0.5), (-1/2/backend.sqrt(3), -0.5), str(r), labelPos="lower right")
                 else:
-                    construct_labelled_arrow((position[0]+1/2/np.sqrt(3), position[1] - 0.5), (-1/2/np.sqrt(3), 0.5), str(r), labelPos="upper right")
+                    construct_labelled_arrow((position[0]+1/2/backend.sqrt(3), position[1] - 0.5), (-1/2/backend.sqrt(3), 0.5), str(r), labelPos="upper right")
         else:
             for y in range(0, 2 * self.Ly - 1, 2):
                 position = compute_tensor_position_W(self.ortho_surface, y)
@@ -264,9 +264,9 @@ class isoTPS_Honeycomb(isoTPS.isoTPS):
                 elif y < 2*self.Ly-2:
                     construct_labelled_arrow((position[0], position[1] + 2), (0, -2), str(u), labelPos="right", color="red")
                 # "l" leg
-                construct_labelled_arrow((position[0] - 1/np.sqrt(3), position[1]), (1/np.sqrt(3), 0), str(l), labelPos="up")
+                construct_labelled_arrow((position[0] - 1/backend.sqrt(3), position[1]), (1/backend.sqrt(3), 0), str(l), labelPos="up")
                 # "r" leg
-                construct_labelled_arrow((position[0] + 1/np.sqrt(3), position[1]), (-1/np.sqrt(3), 0), str(r), labelPos="up")
+                construct_labelled_arrow((position[0] + 1/backend.sqrt(3), position[1]), (-1/backend.sqrt(3), 0), str(r), labelPos="up")
 
         # Draw actual T tensors
         for y in range(self.Ly):
@@ -327,12 +327,12 @@ class isoTPS_Honeycomb(isoTPS.isoTPS):
         for i in range(0, len(self.Ws), 1 + self.ortho_surface%2):
             W = self.Ws[i]
             if i < self.ortho_center:
-                W = np.transpose(W, (0, 2, 3, 1)) # l u r d -> l r d u
+                W = backend.transpose(W, (0, 2, 3, 1)) # l u r d -> l r d u
             elif i > self.ortho_center:
-                W = np.transpose(W, (0, 2, 1, 3)) # l u r d -> l r u d
+                W = backend.transpose(W, (0, 2, 1, 3)) # l u r d -> l r u d
             else:
                 continue
-            W = np.reshape(W, (W.shape[0]*W.shape[1]*W.shape[2], W.shape[3]))
+            W = backend.reshape(W, (W.shape[0]*W.shape[1]*W.shape[2], W.shape[3]))
             if not utility.check_isometry(W):
                 print(f"W tensor at index  {i} is not an isometry ...")
                 success = False
@@ -500,7 +500,7 @@ class isoTPS_Honeycomb(isoTPS.isoTPS):
         -------
         error : float
             the error of the YB move. This is only returned if the debug level is equal or larger than
-            LOG_PER_SITE_ERROR_AND_WALLTIME. Else, -np.float("inf") is returned as error.
+            LOG_PER_SITE_ERROR_AND_WALLTIME. Else, -backend.inf is returned as error.
         """
         # Check if W1 or W2 are the ortho_center
         assert(W1_index == self.ortho_center or W2_index == self.ortho_center)
@@ -578,7 +578,7 @@ class isoTPS_Honeycomb(isoTPS.isoTPS):
         -------
         error : float
             the error of the YB move. This is only returned if the debug level is equal or larger than
-            LOG_PER_SITE_ERROR_AND_WALLTIME. Else, -np.float("inf") is returned as error.
+            LOG_PER_SITE_ERROR_AND_WALLTIME. Else, -backend.inf is returned as error.
         """
         # Check if W1 or W2 are the ortho_center
         assert(W_index == self.ortho_center)
@@ -788,15 +788,15 @@ class isoTPS_Honeycomb(isoTPS.isoTPS):
 
         Returns
         -------
-        T1 : np.ndarray of shape (i, ru1, rd1, ld1, lu1)
+        T1 : backend.array_type of shape (i, ru1, rd1, ld1, lu1)
             part of the twosite wavefunction
-        T2 : np.ndarray of shape (j, ru2, rd2, ld2, lu2)
+        T2 : backend.array_type of shape (j, ru2, rd2, ld2, lu2)
             part of the twosite wavefunction
-        Wm1 : np.ndarray of shape (lm1, um1, rm1, dm1) = (rd1, d, rm1, dm1) or None
+        Wm1 : backend.array_type of shape (lm1, um1, rm1, dm1) = (rd1, d, rm1, dm1) or None
             part of the twosite wavefunction
-        W : np.ndarray of shape (l, u, r, d) = (ru1, u, ld2, d)
+        W : backend.array_type of shape (l, u, r, d) = (ru1, u, ld2, d)
             part of the twosite wavefunction
-        Wp1 : np.ndarray of shape (lp1, up1, rp1, dp1) = (lp1, up1, lu2, u) or None
+        Wp1 : backend.array_type of shape (lp1, up1, rp1, dp1) = (lp1, up1, lu2, u) or None
             part of the twosite wavefunction
         """
         x = self.ortho_surface // 2
@@ -840,7 +840,7 @@ class isoTPS_Honeycomb(isoTPS.isoTPS):
 
         Parameters
         ----------
-        T1, T2, Wm1, W, Wp1: np.ndarray or None
+        T1, T2, Wm1, W, Wp1: backend.array_type or None
             twosite wavefunction. For the shapes of the individual tensors, see get_environment_twosite().
         """
         x = self.ortho_surface // 2
@@ -896,11 +896,11 @@ class isoTPS_Honeycomb(isoTPS.isoTPS):
 
         Returns
         -------
-        T : np.ndarray of shape (i, ru, rd, ld, lu)
+        T : backend.array_type of shape (i, ru, rd, ld, lu)
             part of the onesite wavefunction
-        W : np.ndarray of shape (l, u, r, d) = (rd, u, r, d) or None
+        W : backend.array_type of shape (l, u, r, d) = (rd, u, r, d) or None
             part of the onesite wavefunction
-        Wp1 : np.ndarray of shape (lp1, up1, rp1, dp1) = (ru, up1, rp1, u) or None
+        Wp1 : backend.array_type of shape (lp1, up1, rp1, dp1) = (ru, up1, rp1, u) or None
             part of the onesite wavefunction
         """
         x = self.ortho_surface // 2
@@ -965,7 +965,7 @@ class isoTPS_Honeycomb(isoTPS.isoTPS):
 
         Parameters
         ----------
-        ops : list of np.ndarray of shape (self.d, self.d)
+        ops : list of backend.array_type of shape (self.d, self.d)
             list of one-site operators. At each site, an expectation value is computed from each of
             the operators in the list
         
@@ -998,7 +998,7 @@ class isoTPS_Honeycomb(isoTPS.isoTPS):
         
         Parameters
         ----------
-        ops: list of np.ndarray of shape (self.d, self.d, self.d, self.d) = (i, j, i, j)
+        ops: list of backend.array_type of shape (self.d, self.d, self.d, self.d) = (i, j, i, j)
             list of twosite operators. At each bond, the expectation value of the corresponding operator
             is computed. In total, ops should have length len(ops) == (2 * Ly - 1) * (2 * Lx - 1) = N_bonds
 
@@ -1026,14 +1026,14 @@ class isoTPS_Honeycomb(isoTPS.isoTPS):
 
         Parameters
         ----------
-        U_bonds : list of np.ndarray of shape (i, j, i*, j*)
+        U_bonds : list of backend.array_type of shape (i, j, i*, j*)
             list of time evolution bond operators
 
         Returns
         -------
         error : float
             the error of the YB move. If the debug level is smaller than LOG_PER_SITE_ERROR_AND_WALLTIME,
-            -np.float("inf") is returned instead.
+            -backend.inf is returned instead.
         """
         log_time_and_error = debug_levels.check_debug_level(self.debug_dict, debug_levels.DebugLevel.LOG_PER_SITE_ERROR_AND_WALLTIME)
         # determine index into U_bonds)
@@ -1078,7 +1078,7 @@ class isoTPS_Honeycomb(isoTPS.isoTPS):
 
         Parameters
         ----------
-        U_bonds : list of np.ndarray of shape (i, j, i*, j*)
+        U_bonds : list of backend.array_type of shape (i, j, i*, j*)
             list of time evolution bond operators
         """
         # apply update on even bonds
@@ -1121,7 +1121,7 @@ class isoTPS_Honeycomb(isoTPS.isoTPS):
 
         Parameters
         ----------
-        U_bonds : list of np.ndarray of shape (i, j, i*, j*)
+        U_bonds : list of backend.array_type of shape (i, j, i*, j*)
             list of time evolution bond operators
         move_upwards : bool, optional
             if set to true, operators are applied from the bottom up, otherwise they are applied
@@ -1148,7 +1148,7 @@ class isoTPS_Honeycomb(isoTPS.isoTPS):
 
         Parameters
         ----------
-        U_bonds : list of np.ndarray of shape (i, j, i*, j*)
+        U_bonds : list of backend.array_type of shape (i, j, i*, j*)
             list of real or imaginary time evolution bond operators of time dtau.
         N_steps : int
             number of TEBD steps performed
@@ -1175,7 +1175,7 @@ class isoTPS_Honeycomb(isoTPS.isoTPS):
 
         Parameters
         ----------
-        U_bonds : list of np.ndarray of shape (i, j, i*, j*)
+        U_bonds : list of backend.array_type of shape (i, j, i*, j*)
             list of real or imaginary time evolution bond operators of time dtau/2.
         N_steps : int
             number of TEBD steps performed

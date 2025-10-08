@@ -1,4 +1,4 @@
-import numpy as np
+from .. import backend
 
 """
 This file implements the Conjugate Gradients algorithm on Riemannian manifolds.
@@ -20,15 +20,15 @@ def _beta_hestenes_stiefel(manifold, x_k, x_kp1, grad_k, grad_kp1, mu_k):
     ----------
     manifold : Manifold class implementing the functions inner_product() and transport()
         instance of the class representing the manifold
-    x_k : np.ndarray
+    x_k : backend.array_type
         current iterate, element of the manifold
-    x_kp1 : np.ndarray
+    x_kp1 : backend.array_type
         next iterate, element of the manifold
-    grad_k : np.ndarray
+    grad_k : backend.array_type
         gradient at the current iterate, element of the tangent space of x_k
-    grad_kp1 : np.ndarray
+    grad_kp1 : backend.array_type
         gradient at the next iterate, element of the tangent space of x_kp1
-    mu_k : np.ndarray
+    mu_k : backend.array_type
         current search direction
 
     Returns
@@ -48,15 +48,15 @@ def _beta_fletcher_reeves(manifold, x_k, x_kp1, grad_k, grad_kp1, mu_k):
     ----------
     manifold : Manifold class implementing the functions inner_product() and transport()
         instance of the class representing the manifold
-    x_k : np.ndarray
+    x_k : backend.array_type
         current iterate, element of the manifold
-    x_kp1 : np.ndarray
+    x_kp1 : backend.array_type
         next iterate, element of the manifold
-    grad_k : np.ndarray
+    grad_k : backend.array_type
         gradient at the current iterate, element of the tangent space of x_k
-    grad_kp1 : np.ndarray
+    grad_kp1 : backend.array_type
         gradient at the next iterate, element of the tangent space of x_kp1
-    mu_k : np.ndarray
+    mu_k : backend.array_type
         current search direction
 
     Returns
@@ -74,15 +74,15 @@ def _beta_polark_riberie(manifold, x_k, x_kp1, grad_k, grad_kp1, mu_k):
     ----------
     manifold : Manifold class implementing the functions inner_product() and transport()
         instance of the class representing the manifold
-    x_k : np.ndarray
+    x_k : backend.array_type
         current iterate, element of the manifold
-    x_kp1 : np.ndarray
+    x_kp1 : backend.array_type
         next iterate, element of the manifold
-    grad_k : np.ndarray
+    grad_k : backend.array_type
         gradient at the current iterate, element of the tangent space of x_k
-    grad_kp1 : np.ndarray
+    grad_kp1 : backend.array_type
         gradient at the next iterate, element of the tangent space of x_kp1
-    mu_k : np.ndarray
+    mu_k : backend.array_type
         current search direction
 
     Returns
@@ -102,15 +102,15 @@ def _beta_conjugate_descent(manifold, x_k, x_kp1, grad_k, grad_kp1, mu_k):
     ----------
     manifold : Manifold class implementing the functions inner_product() and transport()
         instance of the class representing the manifold
-    x_k : np.ndarray
+    x_k : backend.array_type
         current iterate, element of the manifold
-    x_kp1 : np.ndarray
+    x_kp1 : backend.array_type
         next iterate, element of the manifold
-    grad_k : np.ndarray
+    grad_k : backend.array_type
         gradient at the current iterate, element of the tangent space of x_k
-    grad_kp1 : np.ndarray
+    grad_kp1 : backend.array_type
         gradient at the next iterate, element of the tangent space of x_kp1
-    mu_k : np.ndarray
+    mu_k : backend.array_type
         current search direction
 
     Returns
@@ -128,15 +128,15 @@ def _beta_liu_storey(manifold, x_k, x_kp1, grad_k, grad_kp1, mu_k):
     ----------
     manifold : Manifold class implementing the functions inner_product() and transport()
         instance of the class representing the manifold
-    x_k : np.ndarray
+    x_k : backend.array_type
         current iterate, element of the manifold
-    x_kp1 : np.ndarray
+    x_kp1 : backend.array_type
         next iterate, element of the manifold
-    grad_k : np.ndarray
+    grad_k : backend.array_type
         gradient at the current iterate, element of the tangent space of x_k
-    grad_kp1 : np.ndarray
+    grad_kp1 : backend.array_type
         gradient at the next iterate, element of the tangent space of x_kp1
-    mu_k : np.ndarray
+    mu_k : backend.array_type
         current search direction
 
     Returns
@@ -156,15 +156,15 @@ def _beta_dai_yuan(manifold, x_k, x_kp1, grad_k, grad_kp1, mu_k):
     ----------
     manifold : Manifold class implementing the functions inner_product() and transport()
         instance of the class representing the manifold
-    x_k : np.ndarray
+    x_k : backend.array_type
         current iterate, element of the manifold
-    x_kp1 : np.ndarray
+    x_kp1 : backend.array_type
         next iterate, element of the manifold
-    grad_k : np.ndarray
+    grad_k : backend.array_type
         gradient at the current iterate, element of the tangent space of x_k
-    grad_kp1 : np.ndarray
+    grad_kp1 : backend.array_type
         gradient at the next iterate, element of the tangent space of x_kp1
-    mu_k : np.ndarray
+    mu_k : backend.array_type
         current search direction
 
     Returns
@@ -185,15 +185,15 @@ def _beta_hager_zhang(manifold, x_k, x_kp1, grad_k, grad_kp1, mu_k):
     ----------
     manifold : Manifold class implementing the functions inner_product() and transport()
         instance of the class representing the manifold
-    x_k : np.ndarray
+    x_k : backend.array_type
         current iterate, element of the manifold
-    x_kp1 : np.ndarray
+    x_kp1 : backend.array_type
         next iterate, element of the manifold
-    grad_k : np.ndarray
+    grad_k : backend.array_type
         gradient at the current iterate, element of the tangent space of x_k
-    grad_kp1 : np.ndarray
+    grad_kp1 : backend.array_type
         gradient at the next iterate, element of the tangent space of x_kp1
-    mu_k : np.ndarray
+    mu_k : backend.array_type
         current search direction
 
     Returns
@@ -235,7 +235,7 @@ class ConjugateGradientsOptimizer:
             string for selecting the rule used to compute beta in the CG algorithm. The selection can change the convergence behaviour of CG
             drastically. Default: "hestenes_stiefel".
         restart_factor : float, optional
-            constant > 0 for Powell's restart strategy [5]. Setting this to np.inf disables the restart strategy. Default: 0.9
+            constant > 0 for Powell's restart strategy [5]. Setting this to backend.inf disables the restart strategy. Default: 0.9
         N_iters : int, optional
             The maximum number of iterations CG is run for. Default: 1000
         step_size_eps : float, optional
@@ -288,7 +288,7 @@ class ConjugateGradientsOptimizer:
         ----------
         iterate : instance of iterate class
             the current iterate.
-        search_direction : np.ndarray
+        search_direction : backend.array_type
             the current search direction. Element of the tangent space at the current iterate.
         slpoe : float
             the slope of the cost function at the current iterate when moving along the current search direction.
@@ -360,7 +360,7 @@ class ConjugateGradientsOptimizer:
 
         Returns
         -------
-        final_iterate : np.ndarray 
+        final_iterate : backend.array_type 
             the final iterate
         num_iters : int
             the number of iterations the algorithm was run for
@@ -370,7 +370,7 @@ class ConjugateGradientsOptimizer:
             number of restarts due to Powell's restart strategy (see [5])
         debug_info : tuple
             tuple with debug information, containing three lists: A list of costs (float), a list of step sizes (float),
-            and list of iterates (np.ndarray). If log_debug_info == False or log_iterates == False, the corresponding
+            and list of iterates (backend.array_type). If log_debug_info == False or log_iterates == False, the corresponding
             entries in the tuple are None.
         """
         # Initital values
@@ -432,7 +432,7 @@ class ConjugateGradientsOptimizer:
             # Check if we want to restart (Powell's restart strategy, see [5])
             transported_gradient = self.manifold.transport(new_iterate.get_iterate(), gradient)
             beta = 0
-            if np.abs(self.manifold.inner_product(new_gradient, transported_gradient)) >= self.restart_factor * self.manifold.norm(new_gradient) * self.manifold.norm(transported_gradient):
+            if backend.abs(self.manifold.inner_product(new_gradient, transported_gradient)) >= self.restart_factor * self.manifold.norm(new_gradient) * self.manifold.norm(transported_gradient):
                 # Restart CG by setting the update direction to the negative gradient (equivalent to beta = 0)
                 num_restarts_powell += 1
             else:

@@ -1,17 +1,17 @@
-import numpy as np
 import scipy
 from . import model
 from ..utility import utility
+from ..utility import backend
 
 class Heisenberg(model.Model):
     """
     Quantum Heisenberg model
     """
 
-    sigma_x = np.array([[0, 1], [1, 0]])
-    sigma_y = np.array([[0, -1.j], [1.j, 0]])
-    sigma_z = np.array([[1, 0], [0, -1]])
-    eye = np.array([[1, 0], [0, 1]])
+    sigma_x = backend.array([[0, 1], [1, 0]])
+    sigma_y = backend.array([[0, -1.j], [1.j, 0]])
+    sigma_z = backend.array([[1, 0], [0, -1]])
+    eye = backend.array([[1, 0], [0, 1]])
 
     def __init__(self, Jx, Jy, Jz, h):
         self.Jx = float(Jx)
@@ -47,12 +47,12 @@ class Heisenberg(model.Model):
                 hL = self.h
             if i+1 == L-1: # last bond
                 hR = self.h
-            H_bond = -1/2*(self.Jx * np.kron(self.sigma_x, self.sigma_x) + 
-                           self.Jy * np.kron(self.sigma_y, self.sigma_y) +
-                           self.Jz * np.kron(self.sigma_z, self.sigma_z) +
-                           hL * np.kron(self.sigma_z, self.eye) +
-                           hR * np.kron(self.eye, self.sigma_z))
-            H_bonds.append(np.reshape(H_bond, (2, 2, 2, 2)))
+            H_bond = -1/2*(self.Jx * backend.kron(self.sigma_x, self.sigma_x) + 
+                           self.Jy * backend.kron(self.sigma_y, self.sigma_y) +
+                           self.Jz * backend.kron(self.sigma_z, self.sigma_z) +
+                           hL * backend.kron(self.sigma_z, self.eye) +
+                           hR * backend.kron(self.eye, self.sigma_z))
+            H_bonds.append(backend.reshape(H_bond, (2, 2, 2, 2)))
         return H_bonds
 
     def compute_H_1D(self, L):
@@ -104,12 +104,12 @@ class Heisenberg(model.Model):
         def create_H_bond(connections_left, connections_right):
             hL = self.h / connections_left
             hR = self.h / connections_right
-            H_bond = -1/2*(self.Jx * np.kron(self.sigma_x, self.sigma_x) + 
-                           self.Jy * np.kron(self.sigma_y, self.sigma_y) +
-                           self.Jz * np.kron(self.sigma_z, self.sigma_z) +
-                           hL * np.kron(self.sigma_z, self.eye) +
-                           hR * np.kron(self.eye, self.sigma_z))
-            return np.reshape(H_bond, (2, 2, 2, 2))
+            H_bond = -1/2*(self.Jx * backend.kron(self.sigma_x, self.sigma_x) + 
+                           self.Jy * backend.kron(self.sigma_y, self.sigma_y) +
+                           self.Jz * backend.kron(self.sigma_z, self.sigma_z) +
+                           hL * backend.kron(self.sigma_z, self.eye) +
+                           hR * backend.kron(self.eye, self.sigma_z))
+            return backend.reshape(H_bond, (2, 2, 2, 2))
         H_bonds = []
         for i in range(2 * Lx - 1):
             if i%2 == 0:
@@ -134,7 +134,7 @@ class Heisenberg(model.Model):
         sy_list = utility.compute_op_list(2*Lx*Ly, self.sigma_y)
         sz_list = utility.compute_op_list(2*Lx*Ly, self.sigma_z)
         D = 2**(2*Lx*Ly)
-        H = np.zeros((D, D))
+        H = backend.zeros((D, D))
         # Add the sigma_z contributions
         for i in range(2*Lx*Ly):
             H -= self.h/2 * sz_list[i]
@@ -190,12 +190,12 @@ class Heisenberg(model.Model):
         def create_H_bond(connections_left, connections_right):
             hL = self.h / connections_left
             hR = self.h / connections_right
-            H_bond = -1/2*(self.Jx * np.kron(self.sigma_x, self.sigma_x) + 
-                           self.Jy * np.kron(self.sigma_y, self.sigma_y) +
-                           self.Jz * np.kron(self.sigma_z, self.sigma_z) +
-                           hL * np.kron(self.sigma_z, self.eye) +
-                           hR * np.kron(self.eye, self.sigma_z))
-            return np.reshape(H_bond, (2, 2, 2, 2))
+            H_bond = -1/2*(self.Jx * backend.kron(self.sigma_x, self.sigma_x) + 
+                           self.Jy * backend.kron(self.sigma_y, self.sigma_y) +
+                           self.Jz * backend.kron(self.sigma_z, self.sigma_z) +
+                           hL * backend.kron(self.sigma_z, self.eye) +
+                           hR * backend.kron(self.eye, self.sigma_z))
+            return backend.reshape(H_bond, (2, 2, 2, 2))
         H_bonds = []
         for i in range(2 * Lx - 1):
             if i%2 == 0:

@@ -1,4 +1,4 @@
-import numpy as np
+from .. import backend
 from .. import utility
 from . import disentangle_renyi_alpha
 from . import disentangle_trunc_error
@@ -12,7 +12,7 @@ def initialize_disentangle(theta, init_U="polar", N_iters_pre_disentangler=200):
 
     Parameters
     ----------
-    theta : np.ndarray of shape (l, i, j, r)
+    theta : backend.array_type of shape (l, i, j, r)
         wavefunction tensor to be disentangled.
     init_U : str, one of {"polar", "identity", "qr", "random"}, optional
         String selecting the method for initializing the disentangling unitary U. Default : "polar".
@@ -22,42 +22,42 @@ def initialize_disentangle(theta, init_U="polar", N_iters_pre_disentangler=200):
 
     Returns
     -------
-    U0 : np.ndarray of shape (i, j, i*, j*)
+    U0 : backend.array_type of shape (i, j, i*, j*)
         initial disentangling unitary.
-    theta : np.ndarray of shape (l, i, j, r)
+    theta : backend.array_type of shape (l, i, j, r)
         wavefunction tensor multiplied with U0.
     """
     # Initialize disentangling unitary
     ml, d1, d2, mr = theta.shape
     if init_U == "identity":
-        U0 = np.eye(d1*d2)
+        U0 = backend.eye(d1*d2)
     elif init_U == "polar":
         # Polar initialization taken from [1, 2].
         if ml >= d1 and mr >= d2:
             theta = theta.transpose(1, 2, 0, 3).reshape((d1*d2, ml, mr)) # ml, d1, d2, mr -> d1, d2, ml, mr -> (d1, d2), ml, mr { D^6 }
             psi = theta.copy()
             if ml > d1:
-                rho = np.tensordot(psi, psi.conj(), ([0, 2], [0, 2])) # [(d1 d2)] ml [mr]; [(d1 d2)*] ml* [mr*] -> ml ml* { D^8 }
-                p, u = np.linalg.eigh(rho) # { D^6 }
-                # eigenvalues from np.eigh are in ascending order: Take the d1 largest ones!
+                rho = backend.tensordot(psi, psi.conj(), ([0, 2], [0, 2])) # [(d1 d2)] ml [mr]; [(d1 d2)*] ml* [mr*] -> ml ml* { D^8 }
+                p, u = backend.eigh(rho) # { D^6 }
+                # eigenvalues from backend.eigh are in ascending order: Take the d1 largest ones!
                 u = u[:, -d1:]
-                psi = np.tensordot(psi, u.conj(), ([1], [0])).transpose([0, 2, 1]) # (d1 d2) [ml] mr; [ml*] d1* -> (d1 d2) mr d1* -> (d1 d2) d1* mr { D^7 }
+                psi = backend.tensordot(psi, u.conj(), ([1], [0])).transpose([0, 2, 1]) # (d1 d2) [ml] mr; [ml*] d1* -> (d1 d2) mr d1* -> (d1 d2) d1* mr { D^7 }
             if mr > d2:
-                rho = np.tensordot(psi, psi.conj(), ([0, 1], [0, 1])) # [(d1 d2)] [ml] mr; [(d1 d2)*] [ml*] mr* -> mr mr* { D^8 }
-                p, u = np.linalg.eigh(rho) # { D^6 }
-                # eigenvalues from np.eigh are in ascending order: Take the d2 largest ones!
+                rho = backend.tensordot(psi, psi.conj(), ([0, 1], [0, 1])) # [(d1 d2)] [ml] mr; [(d1 d2)*] [ml*] mr* -> mr mr* { D^8 }
+                p, u = backend.eigh(rho) # { D^6 }
+                # eigenvalues from backend.eigh are in ascending order: Take the d2 largest ones!
                 u = u[:, -d2:]
-                psi = np.tensordot(psi, u.conj(), ([2], [0])) # (d1 d2) ml [mr]; [mr*] d2* -> (d1 d2) ml d2* { D^7 }
+                psi = backend.tensordot(psi, u.conj(), ([2], [0])) # (d1 d2) ml [mr]; [mr*] d2* -> (d1 d2) ml d2* { D^7 }
             # Renormalize
-            psi /= np.linalg.norm(psi)
+            psi /= backend.norm(psi)
             # Isometrize using polar decomposition
             u, s, v = utility.safe_svd(psi.reshape(d1*d2, d1*d2), full_matrices=False)
-            Zp = np.dot(u, v)
+            Zp = backend.dot(u, v)
             U0 = Zp.T.conj()
-            theta = np.dot(U0, theta.reshape(d1*d2, ml*mr))
+            theta = backend.dot(U0, theta.reshape(d1*d2, ml*mr))
             theta = theta.reshape(d1, d2, ml, mr).transpose(2, 0, 1, 3) # (d1, d2), (ml, mr) -> d1, d2, ml, mr ->  ml, d1, d2, mr { D^6 }
         else:
-            U0 = np.eye(d1*d2)
+            U0 = backend.eye(d1*d2)
     elif init_U == "qr":
         U0, theta = utility.split_matrix_svd(theta.transpose(1, 2, 0, 3).reshape((d1*d2, ml*mr)), d1*d2) # ml, d1, d2, mr -> d1, d2, ml, mr -> (d1, d2), (ml, mr) { D^6 }
         U0 = U0.T.conj()
@@ -70,8 +70,8 @@ def initialize_disentangle(theta, init_U="polar", N_iters_pre_disentangler=200):
     # Perform initial disentangling using the fast renyi-2 disentangler
     if N_iters_pre_disentangler > 0:
         U = disentangle_renyi_alpha.disentangle(theta, debug_logger=debug_logging.DebugLogger(), renyi_alpha=2.0, method="power_iteration", N_iters=N_iters_pre_disentangler)
-        theta = np.tensordot(U, theta, ([2, 3], [1, 2])).transpose(2, 0, 1, 3) # i j [i*] [j*]; ml [d1] [d2] mr -> i j ml mr -> ml i j mr
-        U0 = np.dot(U.reshape(d1*d2, d1*d2), U0)
+        theta = backend.tensordot(U, theta, ([2, 3], [1, 2])).transpose(2, 0, 1, 3) # i j [i*] [j*]; ml [d1] [d2] mr -> i j ml mr -> ml i j mr
+        U0 = backend.dot(U.reshape(d1*d2, d1*d2), U0)
     
     return U0, theta
 
@@ -98,7 +98,7 @@ def disentangle(theta, mode="renyi", init_U="polar", N_iters_pre_disentangler=20
 
     Parameters
     ----------
-    theta : np.ndarray of shape (l, i, j, r)
+    theta : backend.array_type of shape (l, i, j, r)
         wavefunction tensor to be disentangled.
     mode : str, one of {"renyi", "trunc", "renyi_approx", "trunc_approx", "renyi_trunc", "renyi_trunc_approx", "none"}, optional
         String selecting the cost function that is used for disentangling. Default : "renyi". If this is set to "none",
@@ -120,7 +120,7 @@ def disentangle(theta, mode="renyi", init_U="polar", N_iters_pre_disentangler=20
 
     Returns
     -------
-    U_final : np.ndarray of shape (i, j, i*, j*)
+    U_final : backend.array_type of shape (i, j, i*, j*)
         final disentangling unitary after optimization
     """
     _, d1, d2, _ = theta.shape
@@ -152,5 +152,5 @@ def disentangle(theta, mode="renyi", init_U="polar", N_iters_pre_disentangler=20
         raise NotImplementedError(f"disentangling with mode \"{mode}\" is not implemented. Choose one of {temp}!")
 
     # Compute final disentangling tensor
-    U = np.dot(U.reshape(d1*d2, d1*d2), U0).reshape(d1, d2, d1, d2)
+    U = backend.dot(U.reshape(d1*d2, d1*d2), U0).reshape(d1, d2, d1, d2)
     return U

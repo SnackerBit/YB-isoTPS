@@ -1,4 +1,4 @@
-import numpy as np
+from .. import backend
 from .. import utility
 
 """
@@ -19,9 +19,9 @@ class RenyiAlphaIterate:
 
         Parameters
         ----------
-        U : np.ndarray of shape (i, j, i*, j*)
+        U : backend.array_type of shape (i, j, i*, j*)
             disentangling unitary.
-        theta : np.ndarray of shape (l, i, j, r)
+        theta : backend.array_type of shape (l, i, j, r)
             wavefunction tensor to be disentangled.
         alpha : float, optional
             renyi alpha. Default: 0.5.
@@ -58,7 +58,7 @@ class RenyiAlphaIterate:
 
         Returns
         -------
-        U : np.ndarray of shape (i, j, i*, j*)
+        U : backend.array_type of shape (i, j, i*, j*)
             disentangling unitary.
         """
         return self.U
@@ -81,22 +81,22 @@ class RenyiAlphaIterateCG(RenyiAlphaIterate):
             value of the cost function
         """
         # Compute Utheta
-        Utheta = np.dot(np.ascontiguousarray(self.U).reshape((self.D1*self.D2, -1)), np.ascontiguousarray(self.theta.transpose(1, 2, 0, 3)).reshape(self.D1*self.D2, -1)) # l, i, j, r -> i, j, l, r -> (i, j), (l, r)
-        Utheta = np.ascontiguousarray(np.ascontiguousarray(Utheta).reshape((self.D1, self.D2, self.l, self.r)).transpose((2, 0, 1, 3))).reshape((self.l*self.D1, -1)) # (i, j), (l, r) -> i, j, l, r -> l, i, j, r -> (l, i), (j, r)
+        Utheta = backend.dot(backend.ascontiguousarray(self.U).reshape((self.D1*self.D2, -1)), backend.ascontiguousarray(self.theta.transpose(1, 2, 0, 3)).reshape(self.D1*self.D2, -1)) # l, i, j, r -> i, j, l, r -> (i, j), (l, r)
+        Utheta = backend.ascontiguousarray(backend.ascontiguousarray(Utheta).reshape((self.D1, self.D2, self.l, self.r)).transpose((2, 0, 1, 3))).reshape((self.l*self.D1, -1)) # (i, j), (l, r) -> i, j, l, r -> l, i, j, r -> (l, i), (j, r)
         # Perform SVD
         if self.N_iters_svd is None:
             self.X, self.S, self.Y = utility.safe_svd(Utheta, full_matrices=False) # { D^9 }
             if self.chi_max is not None:
-                idx = np.argsort(self.S)[::-1][:self.chi_max]
+                idx = backend.argsort(self.S)[::-1][:self.chi_max]
                 self.X, self.S, self.Y = self.X[:, idx], self.S[idx], self.Y[idx, :]
         else:
             self.X, self.Y, _, _ = utility.split_matrix_iterate_QR(Utheta, self.chi_max, self.N_iters_svd, self.eps_svd, C0=self.Y0, normalize=False) # { N_iters_svd * D^7 }
             self.Y0 = self.Y
-            XX, self.S, self.Y = np.linalg.svd(self.Y, full_matrices=False) # { D^5 }
+            XX, self.S, self.Y = backend.svd(self.Y, full_matrices=False) # { D^5 }
             self.X = self.X@XX
         # Compute cost function
-        self.S2alpha = np.sum(self.S**(2*self.alpha))
-        return 1/(1-self.alpha)*np.log(np.real(self.S2alpha))
+        self.S2alpha = backend.sum(self.S**(2*self.alpha))
+        return 1/(1-self.alpha)*backend.log(backend.real(self.S2alpha))
 
     def compute_gradient(self):
         """
@@ -105,15 +105,15 @@ class RenyiAlphaIterateCG(RenyiAlphaIterate):
 
         Returns
         -------
-        grad : np.ndarray of shape (i, j, i*, j*)
+        grad : backend.array_type of shape (i, j, i*, j*)
             gradient of the cost function
         """
         S_prime = self.S**(2*self.alpha-1)
-        grad = np.ascontiguousarray(self.X@np.diag(S_prime).astype(self.theta.dtype)@self.Y) # -> (l, i), (j, r)
-        grad = np.reshape(grad, (self.l, self.D1, self.D2, self.r))
-        grad = np.ascontiguousarray(grad.transpose((0, 3, 1, 2))).reshape(self.l*self.r, -1) # l, i, j, r -> l, r, i, j -> (l, r), (i, j)
-        theta = np.ascontiguousarray(self.theta.transpose((0, 3, 1, 2))).reshape(self.l*self.r, -1) # l, i, j, r -> l, r, i, j -> (l, r), (i, j)
-        grad = np.dot(grad.T, np.conj(theta)) # (i j) [(l r)]; [(l r)*] (i j)*
+        grad = backend.ascontiguousarray(self.X@backend.diag(S_prime).astype(self.theta.dtype)@self.Y) # -> (l, i), (j, r)
+        grad = backend.reshape(grad, (self.l, self.D1, self.D2, self.r))
+        grad = backend.ascontiguousarray(grad.transpose((0, 3, 1, 2))).reshape(self.l*self.r, -1) # l, i, j, r -> l, r, i, j -> (l, r), (i, j)
+        theta = backend.ascontiguousarray(self.theta.transpose((0, 3, 1, 2))).reshape(self.l*self.r, -1) # l, i, j, r -> l, r, i, j -> (l, r), (i, j)
+        grad = backend.dot(grad.T, backend.conj(theta)) # (i j) [(l r)]; [(l r)*] (i j)*
         grad = 2*self.alpha/(1-self.alpha)/self.S2alpha * grad
         # project gradient to tangent space
         U = self.U.reshape(self.D1*self.D2, -1)
@@ -149,16 +149,16 @@ class RenyiAlphaIterateTRM(RenyiAlphaIterate):
             value of the cost function
         """
         # Compute Utheta
-        self.Utheta = np.tensordot(self.U, self.theta, ([2, 3], [1, 2])) # i j [i*] [j*]; l [i] [j] r -> i j l r { D^8 }
+        self.Utheta = backend.tensordot(self.U, self.theta, ([2, 3], [1, 2])) # i j [i*] [j*]; l [i] [j] r -> i j l r { D^8 }
         self.Utheta = self.Utheta.transpose(2, 0, 1, 3) # i, j, l, r -> l, i, j, r
         # Perform SVD
         l, i, j, r = self.Utheta.shape
         self.X, self.S, self.Y = utility.safe_svd(self.Utheta.reshape(l*i, j*r), full_matrices=False) # { D^9 }
-        self.Y = np.conj(self.Y.T)
+        self.Y = backend.conj(self.Y.T)
         # Cache helper variables
-        self.S2alpha = np.sum(self.S**(2*self.alpha))
+        self.S2alpha = backend.sum(self.S**(2*self.alpha))
         # Compute and return renyi-alpha entropy
-        return 1/(1-self.alpha)*np.log(np.real(self.S2alpha))
+        return 1/(1-self.alpha)*backend.log(backend.real(self.S2alpha))
 
     def compute_gradient(self):
         """
@@ -166,16 +166,16 @@ class RenyiAlphaIterateTRM(RenyiAlphaIterate):
 
         Returns
         -------
-        grad : np.ndarray of shape (i, j, i*, j*)
+        grad : backend.array_type of shape (i, j, i*, j*)
             gradient of the cost function
         """
         if not self.computed_gradient:
             self.S_prime = self.S**(2*self.alpha-1)
-            self.XSprimeY = (self.X*self.S_prime)@np.conj(self.Y.T)
+            self.XSprimeY = (self.X*self.S_prime)@backend.conj(self.Y.T)
             self.XSprimeY = self.XSprimeY.reshape(self.Utheta.shape)
-            self.XSprimeYtheta = np.tensordot(self.XSprimeY, np.conj(self.theta), ([0, 3], [0, 3])) # [l] i j [r]; [l*] k* l* [r*] -> i j k* l*
-            self.grad = np.tensordot(np.conj(self.XSprimeYtheta), self.U, ([2, 3], [2, 3])) # i' j' [k'] [l']; i j [k'] [l'] -> i' j' i j
-            self.grad = np.tensordot(self.grad, self.U, ([0, 1], [0, 1])) # [i'] [j'] i j; [i'] [j'] k l -> i j k l
+            self.XSprimeYtheta = backend.tensordot(self.XSprimeY, backend.conj(self.theta), ([0, 3], [0, 3])) # [l] i j [r]; [l*] k* l* [r*] -> i j k* l*
+            self.grad = backend.tensordot(backend.conj(self.XSprimeYtheta), self.U, ([2, 3], [2, 3])) # i' j' [k'] [l']; i j [k'] [l'] -> i' j' i j
+            self.grad = backend.tensordot(self.grad, self.U, ([0, 1], [0, 1])) # [i'] [j'] i j; [i'] [j'] k l -> i j k l
             self.grad = self.XSprimeYtheta - self.grad
             self.computed_gradient = True
         return self.alpha / (1 - self.alpha) / self.S2alpha * self.grad
@@ -187,17 +187,17 @@ class RenyiAlphaIterateTRM(RenyiAlphaIterate):
 
         Parameters
         ----------
-        dU : np.ndarray of shape (i, j, i*, j*)
+        dU : backend.array_type of shape (i, j, i*, j*)
             element from the tangent space of U
 
         Returns
         -------
-        hvp : np.ndarray of shape (i, j, i*, j*)
+        hvp : backend.array_type of shape (i, j, i*, j*)
             hessian vector product H@dU
         """
         if not self.computed_hessian:
             # Cache helper results
-            self.F = np.zeros((self.k, self.k))
+            self.F = backend.zeros((self.k, self.k))
             for i in range(self.k):
                 for j in range(self.k):
                     if i != j:
@@ -206,42 +206,42 @@ class RenyiAlphaIterateTRM(RenyiAlphaIterate):
                         else:
                             self.F[i, j] = 1/(self.S[j]**2 - self.S[i]**2)
             # Avoid dividing by zero
-            non_zero_indices = np.where(self.S != 0.0)
-            self.S_prime_prime = np.zeros(self.S.shape, dtype=self.S.dtype)
+            non_zero_indices = backend.where(self.S != 0.0)
+            self.S_prime_prime = backend.zeros(self.S.shape, dtype=self.S.dtype)
             self.S_prime_prime[non_zero_indices] = (2*self.alpha - 1) * self.S[non_zero_indices]**(2*self.alpha-2)
             self.computed_hessian = True
-            self.S_inv = np.zeros(self.S.shape, dtype=self.S.dtype)
+            self.S_inv = backend.zeros(self.S.shape, dtype=self.S.dtype)
             self.S_inv[non_zero_indices] = 1 / self.S[non_zero_indices]
         # Compute dP and dD
         l, D1, D2, r = self.theta.shape
-        dUtheta = np.tensordot(dU, self.theta, ([2, 3], [1, 2])) # i j [i*] [j*]; l [i] [j] r -> i j l r { D^8 }
+        dUtheta = backend.tensordot(dU, self.theta, ([2, 3], [1, 2])) # i j [i*] [j*]; l [i] [j] r -> i j l r { D^8 }
         dUtheta = dUtheta.transpose(2, 0, 1, 3).reshape(l*D1, D2*r) # i, j, l, r -> l, i, j, r
-        dP = np.conj(self.X.T)@dUtheta@self.Y
-        dD = 1.j * np.imag(np.diag(dP)) * self.S_inv / 2
+        dP = backend.conj(self.X.T)@dUtheta@self.Y
+        dD = 1.j * backend.imag(backend.diag(dP)) * self.S_inv / 2
         # Compute dX, dS and dY
-        dX = self.X@(self.F * (dP*self.S + self.S[:, np.newaxis]*np.conj(dP.T)) + np.diag(dD)) + (np.eye(l*D1) - self.X@np.conj(self.X.T))@dUtheta@self.Y * self.S_inv
-        dS =np.real(np.diag(dP))
-        dY = self.Y@(self.F * (self.S[:, np.newaxis]*dP + np.conj(dP.T)*self.S) - np.diag(dD)) + (np.eye(D2*r) - self.Y@np.conj(self.Y.T))@np.conj(dUtheta.T)@self.X * self.S_inv
+        dX = self.X@(self.F * (dP*self.S + self.S[:, backend.newaxis]*backend.conj(dP.T)) + backend.diag(dD)) + (backend.eye(l*D1) - self.X@backend.conj(self.X.T))@dUtheta@self.Y * self.S_inv
+        dS =backend.real(backend.diag(dP))
+        dY = self.Y@(self.F * (self.S[:, backend.newaxis]*dP + backend.conj(dP.T)*self.S) - backend.diag(dD)) + (backend.eye(D2*r) - self.Y@backend.conj(self.Y.T))@backend.conj(dUtheta.T)@self.X * self.S_inv
         # Compute first term of the product rule
-        result = -2*self.alpha / self.S2alpha**2 * np.sum(self.S_prime*dS) * self.grad
+        result = -2*self.alpha / self.S2alpha**2 * backend.sum(self.S_prime*dS) * self.grad
         # Compute helper tensor necessary for computing the first two of the remaining four terms
-        dXSY = (self.X*self.S_prime_prime*dS)@np.conj(self.Y.T)
-        dXSY += (dX*self.S_prime)@np.conj(self.Y.T)
-        dXSY += (self.X*self.S_prime)@np.conj(dY.T)
+        dXSY = (self.X*self.S_prime_prime*dS)@backend.conj(self.Y.T)
+        dXSY += (dX*self.S_prime)@backend.conj(self.Y.T)
+        dXSY += (self.X*self.S_prime)@backend.conj(dY.T)
         dXSY = dXSY.reshape(l, D1, D2, r)
         # first of four remaining terms
-        temp_result = np.tensordot(dXSY, np.conj(self.theta), ([0, 3], [0, 3])) # [l] i j [r]; [l*] k* l* [r*] -> i j k* l*
+        temp_result = backend.tensordot(dXSY, backend.conj(self.theta), ([0, 3], [0, 3])) # [l] i j [r]; [l*] k* l* [r*] -> i j k* l*
         # second of four remaining terms
-        temp = np.tensordot(np.conj(temp_result), self.U, ([2, 3], [2, 3])) # i* j* [k*] [l*]; i j [k] [l] -> i* j* i j
-        temp = np.tensordot(temp, self.U, ([0, 1], [0, 1])) # [i*] [j*] i j; [i] [j] k l -> i j k l
+        temp = backend.tensordot(backend.conj(temp_result), self.U, ([2, 3], [2, 3])) # i* j* [k*] [l*]; i j [k] [l] -> i* j* i j
+        temp = backend.tensordot(temp, self.U, ([0, 1], [0, 1])) # [i*] [j*] i j; [i] [j] k l -> i j k l
         temp_result -= temp
         # third of four remaining terms
-        temp = np.tensordot(np.conj(self.XSprimeYtheta), dU, ([2, 3], [2, 3])) # i* j* [k*] [l*]; i j [k] [l] -> i* j* i j
-        temp = np.tensordot(temp, self.U, ([0, 1], [0, 1])) # [i*] [j*] i j; [i] [j] k l -> i j k l
+        temp = backend.tensordot(backend.conj(self.XSprimeYtheta), dU, ([2, 3], [2, 3])) # i* j* [k*] [l*]; i j [k] [l] -> i* j* i j
+        temp = backend.tensordot(temp, self.U, ([0, 1], [0, 1])) # [i*] [j*] i j; [i] [j] k l -> i j k l
         temp_result -= temp
         # fourth of four remaining terms
-        temp = np.tensordot(np.conj(self.XSprimeYtheta), self.U, ([2, 3], [2, 3])) # i* j* [k*] [l*]; i j [k] [l] -> i* j* i j
-        temp = np.tensordot(temp, dU, ([0, 1], [0, 1])) # [i*] [j*] i j; [i] [j] k l -> i j k l
+        temp = backend.tensordot(backend.conj(self.XSprimeYtheta), self.U, ([2, 3], [2, 3])) # i* j* [k*] [l*]; i j [k] [l] -> i* j* i j
+        temp = backend.tensordot(temp, dU, ([0, 1], [0, 1])) # [i*] [j*] i j; [i] [j] k l -> i j k l
         temp_result -= temp
         # Compute final result
         result = self.alpha / (1-self.alpha) * (result + temp_result / self.S2alpha)
@@ -281,26 +281,26 @@ class RenyiAlphaIterateApproxTRM(RenyiAlphaIterate):
             value of the cost function
         """
         # Compute Utheta
-        self.Utheta = np.tensordot(self.U, self.theta, ([2, 3], [1, 2])) # i j [i*] [j*]; l [i] [j] r -> i j l r { D^8 }
+        self.Utheta = backend.tensordot(self.U, self.theta, ([2, 3], [1, 2])) # i j [i*] [j*]; l [i] [j] r -> i j l r { D^8 }
         self.Utheta = self.Utheta.transpose(2, 0, 1, 3) # i, j, l, r -> l, i, j, r
         # Perform SVD
         l, i, j, r = self.Utheta.shape
         if self.N_iters_svd is None:
             self.X, self.S, self.Y = utility.safe_svd(self.Utheta.reshape(l*i, j*r), full_matrices=False) # { D^9 }
-            self.Y = np.conj(self.Y.T)
+            self.Y = backend.conj(self.Y.T)
             if self.chi_max is not None:
-                idx = np.argsort(self.S)[::-1][:self.chi_max]
+                idx = backend.argsort(self.S)[::-1][:self.chi_max]
                 self.X, self.S, self.Y = self.X[:, idx], self.S[idx], self.Y[:, idx]
         else:
             self.X, self.Y, _, _ = utility.split_matrix_iterate_QR(self.Utheta.reshape(l*i, j*r), self.chi_max, self.N_iters_svd, self.eps_svd, C0=self.Y0, normalize=False) # { N_iters_svd * D^7 }
             self.Y0 = self.Y
-            XX, self.S, self.Y = np.linalg.svd(self.Y, full_matrices=False) # { D^5 }
+            XX, self.S, self.Y = backend.svd(self.Y, full_matrices=False) # { D^5 }
             self.X = self.X@XX
-            self.Y = np.conj(self.Y.T)
+            self.Y = backend.conj(self.Y.T)
         # Cache helper variables
-        self.S2alpha = np.sum(self.S**(2*self.alpha))
+        self.S2alpha = backend.sum(self.S**(2*self.alpha))
         # Compute and return renyi-alpha entropy
-        return 1/(1-self.alpha)*np.log(np.real(self.S2alpha))
+        return 1/(1-self.alpha)*backend.log(backend.real(self.S2alpha))
 
     def compute_gradient(self):
         """
@@ -308,17 +308,17 @@ class RenyiAlphaIterateApproxTRM(RenyiAlphaIterate):
 
         Returns
         -------
-        grad : np.ndarray of shape (i, j, i*, j*)
+        grad : backend.array_type of shape (i, j, i*, j*)
             gradient of the cost function
         """
         if not self.computed_gradient:
             self.S_prime = self.S**(2*self.alpha-1)
-            self.Xtheta = np.tensordot(self.X.reshape(self.l, self.D1, self.X.shape[-1]), np.conj(self.theta), ([0], [0])) # [l] i chi; [l*] k* l* r* -> i chi k* l* r* { D^8 }
-            self.XSprimeYtheta = np.tensordot(self.Xtheta, np.diag(self.S_prime), ([1], [0])) # i [chi] k* l* r*; [chi] chi -> i k* l* r* chi { D^7 }
-            self.XSprimeYtheta = np.tensordot(self.XSprimeYtheta, np.conj(self.Y.reshape(self.D2, self.r, self.Y.shape[-1])), ([3, 4], [1, 2])) # i k* l* [r*] [chi]; j [r] [chi] -> i k* l* j  { D^7 }
+            self.Xtheta = backend.tensordot(self.X.reshape(self.l, self.D1, self.X.shape[-1]), backend.conj(self.theta), ([0], [0])) # [l] i chi; [l*] k* l* r* -> i chi k* l* r* { D^8 }
+            self.XSprimeYtheta = backend.tensordot(self.Xtheta, backend.diag(self.S_prime), ([1], [0])) # i [chi] k* l* r*; [chi] chi -> i k* l* r* chi { D^7 }
+            self.XSprimeYtheta = backend.tensordot(self.XSprimeYtheta, backend.conj(self.Y.reshape(self.D2, self.r, self.Y.shape[-1])), ([3, 4], [1, 2])) # i k* l* [r*] [chi]; j [r] [chi] -> i k* l* j  { D^7 }
             self.XSprimeYtheta = self.XSprimeYtheta.transpose(0, 3, 1, 2) # i, k*, l*, j -> i, j, k*, l*
-            self.XSprimeYthetaUU = np.tensordot(np.conj(self.XSprimeYtheta), self.U, ([2, 3], [2, 3])) # i' j' [k'] [l']; i j [k'] [l'] -> i' j' i j { D^6 }
-            self.XSprimeYthetaUU = np.tensordot(self.XSprimeYthetaUU, self.U, ([0, 1], [0, 1])) # [i'] [j'] i j; [i'] [j'] k l -> i j k l { D^6 }
+            self.XSprimeYthetaUU = backend.tensordot(backend.conj(self.XSprimeYtheta), self.U, ([2, 3], [2, 3])) # i' j' [k'] [l']; i j [k'] [l'] -> i' j' i j { D^6 }
+            self.XSprimeYthetaUU = backend.tensordot(self.XSprimeYthetaUU, self.U, ([0, 1], [0, 1])) # [i'] [j'] i j; [i'] [j'] k l -> i j k l { D^6 }
             self.computed_gradient = True
         return self.alpha / (1 - self.alpha) / self.S2alpha * (self.XSprimeYtheta - self.XSprimeYthetaUU)
     
@@ -329,17 +329,17 @@ class RenyiAlphaIterateApproxTRM(RenyiAlphaIterate):
 
         Parameters
         ----------
-        dU : np.ndarray of shape (i, j, i*, j*)
+        dU : backend.array_type of shape (i, j, i*, j*)
             element from the tangent space of U
 
         Returns
         -------
-        hvp : np.ndarray of shape (i, j, i*, j*)
+        hvp : backend.array_type of shape (i, j, i*, j*)
             hessian vector product H@dU
         """
         if not self.computed_hessian:
             # Cache helper results
-            self.F = np.zeros((self.k, self.k)) # { D^2 }
+            self.F = backend.zeros((self.k, self.k)) # { D^2 }
             for i in range(self.k):
                 for j in range(self.k):
                     if i != j:
@@ -348,55 +348,55 @@ class RenyiAlphaIterateApproxTRM(RenyiAlphaIterate):
                             self.F[i, j] = 0.0
                         else:
                             self.F[i, j] = 1/temp
-            self.XthetaY = np.tensordot(self.Xtheta, np.conj(self.Y.reshape(self.D2, self.r, -1)), ([4], [1])) # i chi k* l* [r*]; j* [r*] chi* -> i chi k* l* j* chi* { D^8 }
+            self.XthetaY = backend.tensordot(self.Xtheta, backend.conj(self.Y.reshape(self.D2, self.r, -1)), ([4], [1])) # i chi k* l* [r*]; j* [r*] chi* -> i chi k* l* j* chi* { D^8 }
             self.XthetaY = self.XthetaY.transpose(0, 4, 2, 3, 1, 5) # i, chi, k*, l*, j*, chi* -> i, j, k, l, chi, chi* { D^6 }
-            self.thetaY = np.conj(np.tensordot(self.theta, self.Y.reshape(self.D2, self.r, -1), ([3], [1]))) # l* k* l* [r*]; j* [r*] chi* -> l* k* l* j* chi* { D^8 }
+            self.thetaY = backend.conj(backend.tensordot(self.theta, self.Y.reshape(self.D2, self.r, -1), ([3], [1]))) # l* k* l* [r*]; j* [r*] chi* -> l* k* l* j* chi* { D^8 }
             self.thetaY = self.thetaY.transpose(0, 3, 1, 2, 4) # l*, k*, l*, j*, chi* -> l*, j*, k*, l*, chi* { D^6 }
             # Compute modified inverse of S
-            self.invS = np.zeros(self.S.size, dtype=self.S.dtype)
-            S_nonzero = np.where(self.S != 0.0)
+            self.invS = backend.zeros(self.S.size, dtype=self.S.dtype)
+            S_nonzero = backend.where(self.S != 0.0)
             self.invS[S_nonzero] = 1/self.S[S_nonzero]
             # Compute ImXXT and InYYT
-            self.ImXXT = np.eye(self.X.shape[0]) - self.X@np.conj(self.X.T) # { D^7 }
+            self.ImXXT = backend.eye(self.X.shape[0]) - self.X@backend.conj(self.X.T) # { D^7 }
             self.ImXXT = self.ImXXT.reshape(self.l, self.D1, self.l, self.D1) # { D^6 }
-            self.InYYT = np.eye(self.Y.shape[0]) - self.Y@np.conj(self.Y.T) # { D^7 }
+            self.InYYT = backend.eye(self.Y.shape[0]) - self.Y@backend.conj(self.Y.T) # { D^7 }
             self.InYYT = self.InYYT.reshape(self.D2, self.r, self.D2, self.r) # { D^6 }
             # Compute second derivative of S
-            self.S_prime_prime = np.zeros(self.S.size, dtype=self.S.dtype) # When detecting a zero in S, we set S_prime_prime to zero.
+            self.S_prime_prime = backend.zeros(self.S.size, dtype=self.S.dtype) # When detecting a zero in S, we set S_prime_prime to zero.
             self.S_prime_prime[S_nonzero] = (2*self.alpha - 1) * self.S[S_nonzero]**(2*self.alpha-2)
             # self.S_prime_prime = (2*self.alpha - 1) * self.S**(2*self.alpha-2)
             self.computed_hessian = True
 
-        temp = np.tensordot(dU, np.conj(self.thetaY), ([1, 2, 3], [1, 2, 3])) # i [j] [k] [l]; l* [j*] [k*] [l*] chi* -> i l* chi* { D^7 }
-        dP = np.tensordot(np.conj(self.X).reshape(self.l, self.D1, -1), temp, ([0, 1], [1, 0])) # [l*] [i*] chi; [i] [l*] chi* -> chi chi* { D^5 } 
-        dD = np.diag(1.j*(np.imag(np.diag(dP)) * self.invS / 2))
-        temp = np.tensordot(self.ImXXT, temp, ([2, 3], [1, 0])) * self.invS # l i [l] [i]; [i] [l*] chi* -> l i chi* { D^7 }
+        temp = backend.tensordot(dU, backend.conj(self.thetaY), ([1, 2, 3], [1, 2, 3])) # i [j] [k] [l]; l* [j*] [k*] [l*] chi* -> i l* chi* { D^7 }
+        dP = backend.tensordot(backend.conj(self.X).reshape(self.l, self.D1, -1), temp, ([0, 1], [1, 0])) # [l*] [i*] chi; [i] [l*] chi* -> chi chi* { D^5 } 
+        dD = backend.diag(1.j*(backend.imag(backend.diag(dP)) * self.invS / 2))
+        temp = backend.tensordot(self.ImXXT, temp, ([2, 3], [1, 0])) * self.invS # l i [l] [i]; [i] [l*] chi* -> l i chi* { D^7 }
         temp = temp.reshape(self.X.shape)
-        dX = self.X@(self.F * (dP*self.S + self.S[:, np.newaxis]*np.conj(dP.T)) + dD) + temp # { D^4 }
-        dS = np.real(np.diag(dP))
-        temp = np.tensordot(self.Xtheta, np.conj(dU), ([0, 2, 3], [0, 2, 3])) # [i] chi [k*] [l*] r*; [i] j [k] [l] -> chi r* j { D^7 }
-        temp = np.tensordot(self.InYYT, temp, ([2, 3], [2, 1])) * self.invS # j r [j] [r]; chi [r*] [j] -> j r chi { D^7 }
+        dX = self.X@(self.F * (dP*self.S + self.S[:, backend.newaxis]*backend.conj(dP.T)) + dD) + temp # { D^4 }
+        dS = backend.real(backend.diag(dP))
+        temp = backend.tensordot(self.Xtheta, backend.conj(dU), ([0, 2, 3], [0, 2, 3])) # [i] chi [k*] [l*] r*; [i] j [k] [l] -> chi r* j { D^7 }
+        temp = backend.tensordot(self.InYYT, temp, ([2, 3], [2, 1])) * self.invS # j r [j] [r]; chi [r*] [j] -> j r chi { D^7 }
         temp = temp.reshape(self.Y.shape)
-        dY = self.Y@(self.F * (self.S[:, np.newaxis]*dP + np.conj(dP.T)*self.S) - dD) + temp # { D^4 }
+        dY = self.Y@(self.F * (self.S[:, backend.newaxis]*dP + backend.conj(dP.T)*self.S) - dD) + temp # { D^4 }
 
         # Compute first of five terms
-        result_1 = -2*self.alpha / self.S2alpha**2 * np.sum(self.S_prime * dS) * (self.XSprimeYtheta - self.XSprimeYthetaUU) # { D^4 }
+        result_1 = -2*self.alpha / self.S2alpha**2 * backend.sum(self.S_prime * dS) * (self.XSprimeYtheta - self.XSprimeYthetaUU) # { D^4 }
         # Compute second of five terms
-        temp = np.tensordot(self.XthetaY, np.diag(self.S_prime_prime*dS), ([4, 5], [0, 1])) # i j k l [chi] [chi]; [chi] [chi] -> i j k l { D^6 }
-        temp2 = np.tensordot(self.thetaY, np.diag(self.S_prime), ([4], [1])) # l* j* k* l* [chi*]; chi [chi] -> l j k l chi { D^6 }
-        temp += np.tensordot(dX.reshape(self.l, self.D1, -1), temp2, ([0, 2], [0, 4])) # [l] i [chi]; [l] j k l [chi] -> i j k l { D^7 }
-        temp2 = np.tensordot(self.Xtheta, np.diag(self.S_prime), ([1], [0])) # i [chi] k* l* r*; [chi] chi -> i k l r chi { D^6 }
-        temp += np.tensordot(temp2, np.conj(dY.reshape(self.D2, self.r, -1)), ([3, 4], [1, 2])).transpose(0, 3, 1, 2) # i k l [r] [chi]; j [r] [chi] -> i k l j -> i j k l { D^7 }
+        temp = backend.tensordot(self.XthetaY, backend.diag(self.S_prime_prime*dS), ([4, 5], [0, 1])) # i j k l [chi] [chi]; [chi] [chi] -> i j k l { D^6 }
+        temp2 = backend.tensordot(self.thetaY, backend.diag(self.S_prime), ([4], [1])) # l* j* k* l* [chi*]; chi [chi] -> l j k l chi { D^6 }
+        temp += backend.tensordot(dX.reshape(self.l, self.D1, -1), temp2, ([0, 2], [0, 4])) # [l] i [chi]; [l] j k l [chi] -> i j k l { D^7 }
+        temp2 = backend.tensordot(self.Xtheta, backend.diag(self.S_prime), ([1], [0])) # i [chi] k* l* r*; [chi] chi -> i k l r chi { D^6 }
+        temp += backend.tensordot(temp2, backend.conj(dY.reshape(self.D2, self.r, -1)), ([3, 4], [1, 2])).transpose(0, 3, 1, 2) # i k l [r] [chi]; j [r] [chi] -> i k l j -> i j k l { D^7 }
         result_2 = temp
         # Compute third of five terms
-        temp = np.tensordot(np.conj(temp), self.U, ([2, 3], [2, 3])) # i j [k] [l]; i j [k] [l] -> i j i j { D^6 }
-        result_2 -= np.tensordot(temp, self.U, ([0, 1], [0, 1])) # [i] [j] i j; [i] [j] k l -> i j k l { D^6 }
+        temp = backend.tensordot(backend.conj(temp), self.U, ([2, 3], [2, 3])) # i j [k] [l]; i j [k] [l] -> i j i j { D^6 }
+        result_2 -= backend.tensordot(temp, self.U, ([0, 1], [0, 1])) # [i] [j] i j; [i] [j] k l -> i j k l { D^6 }
         # Compute fourth of five terms
-        temp = np.tensordot(np.conj(self.XSprimeYtheta), dU, ([2, 3], [2, 3])) # i j [k] [l]; i j [k] [l] -> i j i j { D^6 }
-        result_2 -= np.tensordot(temp, self.U, ([0, 1], [0, 1])) # [i] [j] i j; [i] [j] k l -> i j k l { D^6 }
+        temp = backend.tensordot(backend.conj(self.XSprimeYtheta), dU, ([2, 3], [2, 3])) # i j [k] [l]; i j [k] [l] -> i j i j { D^6 }
+        result_2 -= backend.tensordot(temp, self.U, ([0, 1], [0, 1])) # [i] [j] i j; [i] [j] k l -> i j k l { D^6 }
         # Compute fifth of five terms
-        temp = np.tensordot(np.conj(self.XSprimeYtheta), self.U, ([2, 3], [2, 3])) # i j [k] [l]; i j [k] [l] -> i j i j { D^6 }
-        result_2 -= np.tensordot(temp, dU, ([0, 1], [0, 1])) # [i] [j] i j; [i] [j] k l -> i j k l { D^6 }
+        temp = backend.tensordot(backend.conj(self.XSprimeYtheta), self.U, ([2, 3], [2, 3])) # i j [k] [l]; i j [k] [l] -> i j i j { D^6 }
+        result_2 -= backend.tensordot(temp, dU, ([0, 1], [0, 1])) # [i] [j] i j; [i] [j] k l -> i j k l { D^6 }
 
         # Compute final result
         result = (self.alpha / (1 - self.alpha) * (result_1 + result_2 /self.S2alpha)).reshape(self.D1*self.D2, -1)

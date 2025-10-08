@@ -1,8 +1,8 @@
-import numpy as np
 from ..isoTPS.square.isoTPS import isoTPS_Square
 from ..isoTPS.honeycomb.isoTPS import isoTPS_Honeycomb
 from ..utility import utility
 from ..models import tfi
+from ..utility import backend
 import time
 import h5py
 import traceback
@@ -146,7 +146,7 @@ def perform_gs_energy_vs_dtau_run(tps_params, model_params, dtaus, dtau_index, N
                 append_to_log(traceback.format_exc())
             if error is not None:
                 break
-            E = np.sum(tps.copy().compute_expectation_values_twosite(H_bonds))
+            E = backend.sum(tps.copy().compute_expectation_values_twosite(H_bonds))
             if i < dtau_index and len(Es) > 0 and Es[-1] <= E: 
                 # Energy got higher. Go to next dtau!
                 tps = tps_prev

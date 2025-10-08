@@ -1,7 +1,6 @@
-import numpy as np
 import h5py
-import scipy
-import scipy.linalg
+
+from . import backend
 
 """
 This file implements several utility functions that are used throughout the code base
@@ -15,7 +14,7 @@ def safe_svd(A, full_matrices=True):
 
     Parameters
     ----------
-    A : np.ndarray of shape (n, m)
+    A : backend.array_type of shape (n, m)
         The matrix that should be decomposed using SVD.
     full_matrices : bool, optional
         determines the shape of the output matrices. See official
@@ -23,25 +22,14 @@ def safe_svd(A, full_matrices=True):
     
     Returns
     -------
-    U : np.ndarray of shape (n, chi)
-        isometric matrix. A = U@np.diag(S)@V.
-    S : np.ndarray of shape (chi, )
-        vector containing the real singular values >= 0. A = U@np.diag(S)@V.
-    V : np.ndarray of shape (chi, m)
-        V.T is an isometric matrix. A = U@np.diag(S)@V.
+    U : backend.array_type of shape (n, chi)
+        isometric matrix. A = U@backend.diag(S)@V.
+    S : backend.array_type of shape (chi, )
+        vector containing the real singular values >= 0. A = U@backend.diag(S)@V.
+    V : backend.array_type of shape (chi, m)
+        V.T is an isometric matrix. A = U@backend.diag(S)@V.
     """
-    try:
-        return np.linalg.svd(A, full_matrices=full_matrices)
-    except np.linalg.LinAlgError:
-        if np.isnan(A).any() or np.isinf(A).any():
-            print("[WARNING]: Trying to perform SVD on a matrix with nan or inf entries!")
-        U, S, V = scipy.linalg.svd(A, full_matrices=full_matrices, lapack_driver='gesvd')
-        if np.isnan(U).any() or np.isinf(U).any() or np.isnan(S).any() or np.isinf(S).any() or np.isnan(V).any() or np.isinf(V).any():
-            print("[WARNING] scipy SVD did not converge!")
-            m, n = A.shape
-            k = min(m, n)
-            return np.zeros(m, k), np.zeros(k), np.zeros(k, n)
-        return U, S, V
+    return backend.safe_svd(A, full_matrices) # TODO: REMOVE THIS FROM UTILITY.PY
 
 def split_and_truncate(A, chi_max=0, eps=0):
     r"""
@@ -49,7 +37,7 @@ def split_and_truncate(A, chi_max=0, eps=0):
 
     Parameters
     ----------
-    A : np.ndarray of shape (n, m)
+    A : backend.array_type of shape (n, m)
         The matrix that should be split using SVD.
     chi_max : int, optional
         The maximum bond dimension to which the result is truncated. If this is set to zero, the algorithm
@@ -59,14 +47,14 @@ def split_and_truncate(A, chi_max=0, eps=0):
 
     Returns
     -------
-    U : np.ndarray of shape (n, chi)
-        isometric matrix. A \approx U@np.diag(S)@V.
-    S : np.ndarray of shape (chi, )
-        vector containing the normalized real singular values >= 0. A \approx U@np.diag(S)@V.
-    V : np.ndarray of shape (chi, m)
-        V.T is an isometric matrix. A \approx U@np.diag(S)@V.
+    U : backend.array_type of shape (n, chi)
+        isometric matrix. A \approx U@backend.diag(S)@V.
+    S : backend.array_type of shape (chi, )
+        vector containing the normalized real singular values >= 0. A \approx U@backend.diag(S)@V.
+    V : backend.array_type of shape (chi, m)
+        V.T is an isometric matrix. A \approx U@backend.diag(S)@V.
     norm : float
-        the norm of the unnormalized (but already truncated) singular values, np.linalg.norm(S).
+        the norm of the unnormalized (but already truncated) singular values, backend.norm(S).
     error : float
         the error of the truncation (sum of the square of all singular values being thrown away).
     """
@@ -74,17 +62,17 @@ def split_and_truncate(A, chi_max=0, eps=0):
     U, S, V = safe_svd(A, full_matrices=False)
     # truncate
     if chi_max > 0:
-        chi_new = min(chi_max, np.sum(S >= eps))
+        chi_new = min(chi_max, linalg.sum(S >= eps))
     else:
-        chi_new = np.sum(S>=eps)
+        chi_new = backend.sum(S>=eps)
     assert chi_new >= 1
-    piv = np.argsort(S)[::-1][:chi_new]  # keep the largest chi_new singular values
-    error = np.sum(S[chi_new:]**2)
+    piv = backend.argsort(S)[::-1][:chi_new]  # keep the largest chi_new singular values
+    error = backend.sum(S[chi_new:]**2)
     if error > 1.e-1:
-        print("[WARNING]: larger error detected in SVD, error =", error, "sum of remaining singular values:", np.sum(S[:chi_new]**2))
+        print("[WARNING]: larger error detected in SVD, error =", error, "sum of remaining singular values:", backend.sum(S[:chi_new]**2))
     U, S, V = U[:, piv], S[piv], V[piv, :]
     # renormalize
-    norm = np.linalg.norm(S)
+    norm = backend.norm(S)
     if norm < 1.e-7 and norm != 0.0:
         print(f"[WARNING]: Small singular values, norm(S) = {norm}")
     if norm != 0.0:
@@ -102,14 +90,14 @@ def random_isometry(N, M):
     
     Returns
     -------
-    W : np.ndarray of shape (N, M)
+    W : backend.array_type of shape (N, M)
         random isometry
     """
-    z = (np.random.random((N, N)) + 1j*np.random.random((N, N)))/np.sqrt(2)
-    q, r = np.linalg.qr(z)
-    d = np.diag(r)
-    ph = d/np.abs(d)
-    q = q@np.diag(ph)@q
+    z = (backend.random((N, N)) + 1j*backend.random((N, N)))/backend.sqrt(2)
+    q, r = backend.qr(z)
+    d = backend.diag(r)
+    ph = d/backend.abs(d)
+    q = q@backend.diag(ph)@q
     return q[:, :M]
 
 def random_unitary(N):
@@ -123,11 +111,10 @@ def random_unitary(N):
     
     Returns
     -------
-    U : np.ndarray of shape (N, N)
+    U : backend.array_type of shape (N, N)
         random unitary
     """
-    from scipy.stats import unitary_group
-    return unitary_group.rvs(N)
+    backend.random_unitary(N) # TODO: REMOVE THIS FROM UTILITY.PY
 
 def check_isometry(A):
     r"""
@@ -137,7 +124,7 @@ def check_isometry(A):
 
     Parameters
     ----------
-    A : np.ndarray of shape (in, out)
+    A : backend.array_type of shape (in, out)
         the matrix that is to be checked
 
     Returns
@@ -145,8 +132,8 @@ def check_isometry(A):
     result : bool
         wether A is an isometry or not
     """
-    AA_dagger = A@np.conj(A.T)
-    return np.all(np.isclose(np.conj(A.T)@A, np.eye(A.shape[1]))) and np.all(np.isclose(AA_dagger, AA_dagger@AA_dagger))
+    AA_dagger = A@backend.conj(A.T)
+    return backend.all(backend.isclose(backend.conj(A.T)@A, backend.eye(A.shape[1]))) and backend.all(backend.isclose(AA_dagger, AA_dagger@AA_dagger))
 
 def flip_W(W):
     """
@@ -160,17 +147,17 @@ def flip_W(W):
 
     Parameters
     ----------
-    W : np.ndarray with ndim = 4 or None
+    W : backend.array_type with ndim = 4 or None
         the W tensor to be flipped
 
     Returns
     -------
-    W_prime : np.ndarray with ndim = 4 or None
+    W_prime : backend.array_type with ndim = 4 or None
         the flipped W tensor, or None if W == None
     """
     if W is None: 
         return None
-    return np.transpose(W, (2, 1, 0, 3)) # l, u, r, d <-> r, u, l, d
+    return backend.transpose(W, (2, 1, 0, 3)) # l, u, r, d <-> r, u, l, d
 
 def flip_T_square(T):
     r"""
@@ -186,17 +173,17 @@ def flip_T_square(T):
 
     Parameters
     ----------
-    T : np.ndarray with ndim = 5 or None
+    T : backend.array_type with ndim = 5 or None
         the T tensor to be flipped
 
     Returns
     -------
-    T_prime : np.ndarray with ndim = 5 or None
+    T_prime : backend.array_type with ndim = 5 or None
         the flipped T tensor, or None if T == None
     """
     if T is None:
         return None
-    return np.transpose(T, (0, 4, 3, 2, 1)) # p, ru, rd, ld, lu <-> p, lu, ld, rd, ru
+    return backend.transpose(T, (0, 4, 3, 2, 1)) # p, ru, rd, ld, lu <-> p, lu, ld, rd, ru
 
 def flip_T_honeycomb(T):
     r"""
@@ -210,12 +197,12 @@ def flip_T_honeycomb(T):
 
     Parameters
     ----------
-    T : np.ndarray with ndim = 4 or None
+    T : backend.array_type with ndim = 4 or None
         the T tensor to be flipped
 
     Returns
     -------
-    T_prime : np.ndarray with ndim = 4 or None
+    T_prime : backend.array_type with ndim = 4 or None
         the flipped T tensor, or None if T == None        
     """
     if T is None:
@@ -260,17 +247,17 @@ def flip_twosite_op(op):
 
     Parameters
     ----------
-    op : np.ndarray with ndim = 4 or None
+    op : backend.array_type with ndim = 4 or None
         the op tensor to be flipped
 
     Returns
     -------
-    op_prime : np.ndarray with ndim = 4 or None
+    op_prime : backend.array_type with ndim = 4 or None
         the flipped op tensor, or None if op == None
     """
     if op is None:
         return None
-    return np.transpose(op, (1, 0, 3, 2)) # i, j, i*, j* -> j, i, j*, i*
+    return backend.transpose(op, (1, 0, 3, 2)) # i, j, i*, j* -> j, i, j*, i*
 
 def lq(X):
     """
@@ -278,17 +265,17 @@ def lq(X):
 
     Parameters
     ----------
-    X: np.ndarray of shape (n, m)
+    X: backend.array_type of shape (n, m)
         the matrix of which the LQ decomposition is taken
     
     Returns
     -------
-    L: np.ndarray of shape (n, chi)
+    L: backend.array_type of shape (n, chi)
         L factor of the LQ decomposition.
-    Q: np.ndarray of shape (chi, m)
+    Q: backend.array_type of shape (chi, m)
         Q factor of the LQ decomposition. Q.T is an isometry.
     """
-    Q, R = np.linalg.qr(X.T)
+    Q, R = backend.qr(X.T)
     return R.T, Q.T
 
 def split_dims(chi, D_max):
@@ -315,7 +302,7 @@ def split_dims(chi, D_max):
     best_sum = 2
     best_D1 = 1
     best_D2 = 1
-    for D1 in range(1, int(np.floor(np.sqrt(chi))) + 1):
+    for D1 in range(1, int(backend.floor(backend.sqrt(chi))) + 1):
         D2 = min(chi // D1, D_max)
         if D1 * D2 > best_prod:
             best_prod = D1 * D2
@@ -335,37 +322,37 @@ def split_matrix_svd(A, chi):
 
     Parameters
     ----------
-    A : np.ndarray of shape (n, m)
+    A : backend.array_type of shape (n, m)
         the matrix to be split.
     chi : int
         split dimension. should be >= 1.
 
     Returns
     -------
-    B : np.ndarray of shape (n, chi)
+    B : backend.array_type of shape (n, chi)
         first factor of the split. B is an isometry. A \approx B@C.
-    C : np.ndarray of shape (chi, m)
+    C : backend.array_type of shape (chi, m)
         second factor of the split. A \approx B@C.
     """
     assert(chi > 0)
     if chi == min(A.shape[0], A.shape[1]):
-        return np.linalg.qr(A)
+        return backend.qr(A)
     elif chi > min(A.shape[0], A.shape[1]):
-        Q, R = np.linalg.qr(A)
-        Q = Q @ np.eye(Q.shape[1], chi)
-        Q, R2 = np.linalg.qr(Q)
-        R = R2 @ np.eye(chi, R.shape[0]) @ R
+        Q, R = backend.qr(A)
+        Q = Q @ backend.eye(Q.shape[1], chi)
+        Q, R2 = backend.qr(Q)
+        R = R2 @ backend.eye(chi, R.shape[0]) @ R
         return Q, R
     # Split and truncate A via SVD
     B, S, V = safe_svd(A, full_matrices=False)
-    piv = np.argsort(S)[::-1][:chi]
+    piv = backend.argsort(S)[::-1][:chi]
     B, S, V = B[:, piv], S[piv], V[piv, :]
     # Renormalize
-    S /= np.linalg.norm(S)
+    S /= backend.norm(S)
     # Isometrize B
-    B, R = np.linalg.qr(B)
+    B, R = backend.qr(B)
     # Absorb R and S into V to form C
-    C = R @ np.diag(S) @ V
+    C = R @ backend.diag(S) @ V
     return B, C
 
 def split_matrix_iterate_QR(A, chi, N_iters, eps=1e-9, C0=None, smart_initial_condition=True, normalize=True, log_iterates=False):
@@ -378,7 +365,7 @@ def split_matrix_iterate_QR(A, chi, N_iters, eps=1e-9, C0=None, smart_initial_co
 
     Parameters
     ----------
-    A : np.ndarray of shape (n, m)
+    A : backend.array_type of shape (n, m)
         the matrix to be split.
     chi : int
         split dimension. should be >= 1.
@@ -387,7 +374,7 @@ def split_matrix_iterate_QR(A, chi, N_iters, eps=1e-9, C0=None, smart_initial_co
     eps : float, optional
         if the relative decrease of the error after one iteration is smaller than eps,
         the algorithm terminates. Default value: 1e-9.
-    C0 : np.ndarray or None, optional
+    C0 : backend.array_type or None, optional
         Initialization for the C matrix. If multiple splits are executed on similar matrices,
         the result of a previous split can be a very good initialization for the next split.
         Default value: None
@@ -403,13 +390,13 @@ def split_matrix_iterate_QR(A, chi, N_iters, eps=1e-9, C0=None, smart_initial_co
 
     Returns
     -------
-    B : np.ndarray of shape (n, chi)
+    B : backend.array_type of shape (n, chi)
         first factor of the split. B is an isometry. A \approx B@C.
-    C : np.ndarray of shape (chi, m)
+    C : backend.array_type of shape (chi, m)
         second factor of the split. A \approx B@C.
     num_iters : int
         the number of iterations used
-    iterates : List of (np.ndarray, np.ndarray) or None
+    iterates : List of (backend.array_type, backend.array_type) or None
         List of iterates (B_i, C_i). If log_iterates is set to False,
         None is returned instead.
     """
@@ -418,17 +405,17 @@ def split_matrix_iterate_QR(A, chi, N_iters, eps=1e-9, C0=None, smart_initial_co
     if log_iterates:
         iterates = []
     if chi is None or chi == min(A.shape[0], A.shape[1]):
-        Q, R = np.linalg.qr(A)
-        Q, R = np.ascontiguousarray(Q), np.ascontiguousarray(R)
+        Q, R = backend.qr(A)
+        Q, R = backend.ascontiguousarray(Q), backend.ascontiguousarray(R)
         if log_iterates:
             iterates.append((Q, R))
         return Q, R, 0, iterates
     elif chi > min(A.shape[0], A.shape[1]):
-        Q, R = np.linalg.qr(A)
-        Q = np.ascontiguousarray(Q) @ np.eye(Q.shape[1], chi, dtype=Q.dtype)
-        Q, R2 = np.linalg.qr(Q)
-        R = np.ascontiguousarray(R2) @ np.eye(chi, R.shape[0], dtype=R.dtype) @ R
-        Q, R = np.ascontiguousarray(Q), np.ascontiguousarray(R)
+        Q, R = backend.qr(A)
+        Q = backend.ascontiguousarray(Q) @ backend.eye(Q.shape[1], chi, dtype=Q.dtype)
+        Q, R2 = backend.qr(Q)
+        R = backend.ascontiguousarray(R2) @ backend.eye(chi, R.shape[0], dtype=R.dtype) @ R
+        Q, R = backend.ascontiguousarray(Q), backend.ascontiguousarray(R)
         if log_iterates:
             iterates.append((Q, R))
         return Q, R, 0, iterates
@@ -437,33 +424,33 @@ def split_matrix_iterate_QR(A, chi, N_iters, eps=1e-9, C0=None, smart_initial_co
         C = C0
     elif smart_initial_condition:
         # find the chi largest rows
-        temp = np.sum(np.abs(A), 1)
-        piv = np.argsort(temp)[::-1][:chi]
+        temp = backend.sum(backend.abs(A), 1)
+        piv = backend.argsort(temp)[::-1][:chi]
         # slice A matrix
         C = A[piv, :]
     else:
         # Initialize C with identity
-        C = np.eye(chi, A.shape[1], dtype=A.dtype)
+        C = backend.eye(chi, A.shape[1], dtype=A.dtype)
     error = None
     for n in range(N_iters):
         # Isometrize C
-        C, _ = np.linalg.qr(C.T)
+        C, _ = backend.qr(C.T)
         # Compute B
-        B = np.dot(A, np.conj(C))
+        B = backend.dot(A, backend.conj(C))
         # isometrize B
-        B, _ = np.linalg.qr(B)
+        B, _ = backend.qr(B)
         # Compute C
-        C = np.dot(np.conj(B).T, A)
+        C = backend.dot(backend.conj(B).T, A)
         # Store iterates
         if log_iterates:
             iterates.append((B, C))
         # Check if we are done
-        error_new = np.linalg.norm(A - B@C)
-        if error is not None and (np.isclose(error_new, 0) or np.abs((error - error_new)/error) < eps):
+        error_new = backend.norm(A - B@C)
+        if error is not None and (backend.isclose(error_new, 0) or backend.abs((error - error_new)/error) < eps):
             break
         error = error_new
     if normalize:
-        return B, C / np.linalg.norm(C), n + 1, iterates
+        return B, C / backend.norm(C), n + 1, iterates
     else:
         return B, C, n + 1, iterates
 
@@ -475,7 +462,7 @@ def split_matrix(A, chi, mode, N_iters=None):
 
     Parameters
     ----------
-    A : np.ndarray of shape (n, m)
+    A : backend.array_type of shape (n, m)
         the matrix to be split.
     chi : int
         split dimension. should be >= 1.
@@ -486,9 +473,9 @@ def split_matrix(A, chi, mode, N_iters=None):
 
     Returns
     -------
-    B : np.ndarray of shape (n, chi)
+    B : backend.array_type of shape (n, chi)
         first factor of the split. B is an isometry. A \approx B@C.
-    C : np.ndarray of shape (chi, m)
+    C : backend.array_type of shape (chi, m)
         second factor of the split. A \approx B@C.
     """
     if mode == "svd":
@@ -506,12 +493,12 @@ def isometrize_polar(A):
 
     Parameters
     ----------
-    A : np.ndarray of shape (n, m)
+    A : backend.array_type of shape (n, m)
         real or complex matrix
 
     Returns
     -------
-    B : np.ndarray of shape (n, m)
+    B : backend.array_type of shape (n, m)
         isometry closest to A
     """
     U, _, V = safe_svd(A, full_matrices=False)
@@ -525,14 +512,14 @@ def calc_U_bonds(H_bonds, dt):
 
     Parameters
     ----------
-    H_bonds : List of np.ndarray with ndim = 4
+    H_bonds : List of backend.array_type with ndim = 4
         list of two-site operators making up the Hamiltonian.
     dt : complex
         real or imaginary time. Note that real dt means imaginary time evolution.
 
     Returns
     -------
-    U_bonds : List of np.ndarray with ndim = 4
+    U_bonds : List of backend.array_type with ndim = 4
         list of two-site real or imaginary time evolution operators
     """
     U_bonds = []
@@ -541,9 +528,9 @@ def calc_U_bonds(H_bonds, dt):
         if H is None:
             U_bonds.append(None)
         else:
-            H = np.reshape(H, (d*d, d*d))
-            U = scipy.linalg.expm(-dt*H)
-            U_bonds.append(np.reshape(U, (d, d, d, d)))
+            H = backend.reshape(H, (d*d, d*d))
+            U = backend.expm(-dt*H)
+            U_bonds.append(backend.reshape(U, (d, d, d, d)))
     return U_bonds
 
 def compute_op_list(L, op):
@@ -556,26 +543,26 @@ def compute_op_list(L, op):
     ----------
     L : int
         number of sites in the chain
-    op : np.ndarray of size (d, d)
+    op : backend.sparse_array_type of size (d, d)
         single-site operator
 
     Returns
     -------
-    result : List of np.ndarray of size (d^L, d^L)
+    result : List of backend.array_type of size (d^L, d^L)
         list of single site operators acting on the full Hilbert space
     """
     result_list = []
-    eye = np.eye(*op.shape)
+    eye = backend.eye(*op.shape)
     for j in range(L):
         result = eye
         if j == 0:
             result = op
         else:
             for i in range(1, j):
-                result = scipy.sparse.kron(result, eye)
-            result = scipy.sparse.kron(result, op)
+                result = backend.sparse_kron(result, eye)
+            result = backend.sparse_kron(result, op)
         for i in range(j+1, L):
-            result = scipy.sparse.kron(result, eye)
+            result = backend.sparse_kron(result, eye)
         result_list.append(result)
     return result_list
 
@@ -589,9 +576,9 @@ def average_site_expectation_value(L, psi, op):
     ----------
     L : int
         number of sites
-    psi : np.ndarray of size (L^d, )
+    psi : backend.array_type of size (L^d, )
         vector representing the wave function
-    op : np.ndarray of size (d, d)
+    op : backend.array_type of size (d, d)
         single-site operator
 
     Returns
@@ -656,7 +643,7 @@ def dump_dict_into_hf(hf, d):
     d : dict
         the dictionary
     """
-    allowed_types = [int, float, complex, bool, str, np.ndarray]
+    allowed_types = [int, float, complex, bool, str, backend.array_type]
     def _is_allowed_type(value):
         for allowed_type in allowed_types:
             if isinstance(value, allowed_type):

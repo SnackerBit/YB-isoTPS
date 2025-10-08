@@ -1,4 +1,4 @@
-import numpy as np
+from .. import backend
 from .. import utility
 from . import tripartite_decomposition_svd
 from . import tripartite_decomposition_iterate_polar
@@ -24,7 +24,7 @@ def tripartite_decomposition(T, D1, D2, chi, mode="svd", debug_logger=debug_logg
 
     Parameters
     ----------
-    T : np.ndarray of shape (chi_1, chi_2, chi_3)
+    T : backend.array_tpye of shape (chi_1, chi_2, chi_3)
         the tensor that is to be decomposed.
     D1 : int
         bond dimension of the leg connecting the A and B tensor.
@@ -42,11 +42,11 @@ def tripartite_decomposition(T, D1, D2, chi, mode="svd", debug_logger=debug_logg
 
     Returns
     -------
-    A : np.ndarray of shape (chi_1, D1, D2)
+    A : backend.array_tpye of shape (chi_1, D1, D2)
         resulting A tensor, isometry along (chi_1, (D1, D2))
-    B : np.ndarray of shape (D1, chi_2, chi)
+    B : backend.array_tpye of shape (D1, chi_2, chi)
         resulting B tensor, isometry along ((D1, chi_2), chi)
-    C : np.ndarray of shape (D2, chi, chi_3)
+    C : backend.array_tpye of shape (D2, chi, chi_3)
         resulting C tensor, normalized.
     """
     if mode == "svd":

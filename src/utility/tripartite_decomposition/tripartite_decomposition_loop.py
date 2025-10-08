@@ -1,27 +1,26 @@
-import numpy as np
-from scipy.linalg import svd
+from .. import backend
 import time 
 from sklearn.utils.extmath import randomized_svd
 from .. import debug_logging
 
 def get_psi(A,S,B):
-    psi_p = np.tensordot(S,B,axes=[2,1]) # i a j b
-    psi_p = np.tensordot(A,psi_p,axes=[(1,2),(0,2)]) # i a j b
-    return(psi_p/np.linalg.norm(psi_p))
+    psi_p = backend.tensordot(S,B,axes=[2,1]) # i a j b
+    psi_p = backend.tensordot(A,psi_p,axes=[(1,2),(0,2)]) # i a j b
+    return(psi_p/backend.norm(psi_p))
 
 def rq(A):
-    Q,R = np.linalg.qr(np.flipud(A).T)
-    R = np.flipud(R.T)
+    Q,R = backend.qr(backend.flipud(A).T)
+    R = backend.flipud(R.T)
     Q = Q.T
     return R[:,::-1],Q[::-1,:]
 
 def svd_truncated(A, chi_max,p_trunc): 
     #X,Y,Z = svd(A,full_matrices=False)
     X,Y,Z = randomized_svd(A,n_components=chi_max, random_state=0)
-    chi_new = np.min([np.sum(Y/np.linalg.norm(Y)>p_trunc), chi_max])
-    Y = Y[:chi_new] / np.linalg.norm(Y[:chi_new])
+    chi_new = backend.min([backend.sum(Y/backend.norm(Y)>p_trunc), chi_max])
+    Y = Y[:chi_new] / backend.norm(Y[:chi_new])
     
-    return X[:,:chi_new], np.diag(Y), Z[:chi_new,:]
+    return X[:,:chi_new], backend.diag(Y), Z[:chi_new,:]
     
 def split_psi(psi, dL, dR, truncation_par={'chi_max':10, 'p_trunc':1e-8,}, max_iter=100, eps = 1e-10, init ='psi0', log_iterates=False): 
     
@@ -41,27 +40,27 @@ def split_psi(psi, dL, dR, truncation_par={'chi_max':10, 'p_trunc':1e-8,}, max_i
         raise ValueError
 
     if  init == 'random':
-        A = 0.5 - np.random.rand(d,dL,dR)
-        S = 0.5 - np.random.rand(dL,mL,chi_max)
-        B = 0.5 - np.random.rand(dR,chi_max,mR)
+        A = 0.5 - backend.rand(d,dL,dR)
+        S = 0.5 - backend.rand(dL,mL,chi_max)
+        B = 0.5 - backend.rand(dR,chi_max,mR)
     else:
         if d < mL*mR:
-            rho = np.dot(psi.reshape((d, mL*mR)), psi.reshape((d, mL*mR)).T)
-            p, X = np.linalg.eigh(rho)
-            perm = np.argsort(-p)
+            rho = backend.dot(psi.reshape((d, mL*mR)), psi.reshape((d, mL*mR)).T)
+            p, X = backend.eigh(rho)
+            perm = backend.argsort(-p)
             X = X[:, perm]
             #p = p[perm]
         else:
-            X, Y, Z = svd(psi.reshape(d,mL*mR), full_matrices=True)
+            X, Y, Z = backend.svd(psi.reshape(d,mL*mR), full_matrices=True)
             #p = Y**2
         
-        #opt = np.sqrt(np.sum(p[:dL*dR]))
+        #opt = backend.sqrt(backend.sum(p[:dL*dR]))
         A = X[:, :dL*dR].reshape(-1,dL,dR)
     
-        theta = np.tensordot(A.conj(),psi,axes=(0,0)).reshape(dL,dR,mL,mR)
+        theta = backend.tensordot(A.conj(),psi,axes=(0,0)).reshape(dL,dR,mL,mR)
         theta = theta.transpose(0,2,1,3).reshape(dL*mL,dR*mR)    
     
-        X,Y,Z = svd_truncated(np.ascontiguousarray(theta),chi_max,truncation_par['p_trunc'])
+        X,Y,Z = svd_truncated(backend.ascontiguousarray(theta),chi_max,truncation_par['p_trunc'])
         
         S = (X@Y).reshape(dL,mL,-1)
         B = Z.reshape(-1,dR,mR).transpose(1,0,2)
@@ -76,33 +75,33 @@ def split_psi(psi, dL, dR, truncation_par={'chi_max':10, 'p_trunc':1e-8,}, max_i
     go = True
     S2s = []
     while m < max_iter and go:
-        theta = np.tensordot(psi,S,axes = [1,1])                        # d mR dL a
-        theta = np.tensordot(theta,B,axes = [(1,3),(2,1)])              # d dL dR
+        theta = backend.tensordot(psi,S,axes = [1,1])                        # d mR dL a
+        theta = backend.tensordot(theta,B,axes = [(1,3),(2,1)])              # d dL dR
         theta = theta.reshape(d,dL*dR)                                  # d dL*dR
     
-        X, Y, Z = svd(np.ascontiguousarray(theta),full_matrices=0)
+        X, Y, Z = backend.svd(backend.ascontiguousarray(theta),full_matrices=0)
         A = (X@Z).reshape(d,dL,dR)
     
-        theta = np.tensordot(psi, A, axes=[0,0])                        # mL mR dL dR
+        theta = backend.tensordot(psi, A, axes=[0,0])                        # mL mR dL dR
         theta = theta.transpose(2,0,3,1)                                # dL mL dR mR
         theta = theta.reshape(dL*mL,dR*mR)
 
-        X,Y,Z = svd_truncated(np.ascontiguousarray(theta),chi_max,truncation_par['p_trunc'])
+        X,Y,Z = svd_truncated(backend.ascontiguousarray(theta),chi_max,truncation_par['p_trunc'])
         
         S = (X@Y).reshape(dL,mL,-1)
         B = Z.reshape(-1,dR,mR).transpose(1,0,2)
 
-        S2s.append(np.sum(Y)) 
+        S2s.append(backend.sum(Y)) 
         m+=1
         if m > 1:
-            go = np.abs(S2s[-1] - S2s[-2]) >= eps
+            go = backend.abs(S2s[-1] - S2s[-2]) >= eps
 
         if log_iterates:
             info["As"].append(A)
             info["Bs"].append(B)
             info["Ss"].append(S)
     
-    info['s_Lambda'] = np.diag(Y)
+    info['s_Lambda'] = backend.diag(Y)
     return A, S, B, m, info
 
 def tripartite_decomposition(T, D1, D2, chi, N_iters=100, eps=1e-9, p_trunc=1e-8, initialize="psi0", debug_logger=debug_logging.DebugLogger()):
