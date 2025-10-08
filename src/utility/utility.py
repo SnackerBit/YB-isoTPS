@@ -643,7 +643,7 @@ def dump_dict_into_hf(hf, d):
     d : dict
         the dictionary
     """
-    allowed_types = [int, float, complex, bool, str, backend.array_type]
+    allowed_types = [int, float, complex, bool, str, backend.array_type, list]
     def _is_allowed_type(value):
         for allowed_type in allowed_types:
             if isinstance(value, allowed_type):

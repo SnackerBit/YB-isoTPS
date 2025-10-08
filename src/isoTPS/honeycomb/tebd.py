@@ -1,6 +1,7 @@
 from ...utility import utility
 from ...utility import backend
 from ...utility.tripartite_decomposition import tripartite_decomposition as tripartite_decomposition_lib
+from ...utility import debug_logging
 
 """
 This file implements the application of a two-site time evolution operator as used in TEBD for honeycomb isoTPS.
@@ -85,7 +86,7 @@ def _compute_error_1(T1, T2, W, T1_prime, T2_prime, W_prime, U):
     error = backend.sqrt(error)
     return error
 
-def tebd_step_1(T1, T2, W, U, mode="svd", log_error=False, **kwargs):
+def tebd_step_1(T1, T2, W, U, mode="svd", debug_logger=debug_logging.DebugLogger(), **kwargs):
     r"""
     Performs a single TEBD step by approximating the updated tensors of the two site wavefunction, after the time evolution operator
     U has been applied. the bond dimension of all tensors is kept the same.
@@ -112,9 +113,8 @@ def tebd_step_1(T1, T2, W, U, mode="svd", log_error=False, **kwargs):
         selecting the tebd_step implementation that is called. Depending on the implementation,
         additional parameters may be needed, that get passed on through kwargs. See individual
         tebd_step implementations for more detail.
-    log_error: bool, optional
-        If set to true, the relative error of the TEBD step norm(contr_before - contr_after) / norm(contr_before) is 
-        additionally computed and returned.
+    debug_logger : DebugLogger instance, optional
+        DebugLogger instance managing debug logging. See 'src/utility/debug_logging.py' for more details.
     **kwargs:
         keyword arguments get passed on to the selected tebd_step implementation.
 
@@ -127,7 +127,8 @@ def tebd_step_1(T1, T2, W, U, mode="svd", log_error=False, **kwargs):
     W_prime : backend.array_type of shape (l, u, r, d) = (r1, u, l2, d)
         part of the updated two-site wavefunction
     error : float
-        error of applying the time evolution operator, or -float("inf") if log_error is set to false.                                    
+        error of applying the time evolution operator, or -float("inf") if debug_logger.log_local_tebd_update_errors and
+        debug_logger.log_approximate_column_error_tebd are set to false.                                
     """
     # group legs s.t. we have to do less reshaping during the subroutine
     l, u, r, d = W.shape
@@ -145,7 +146,7 @@ def tebd_step_1(T1, T2, W, U, mode="svd", log_error=False, **kwargs):
         raise NotImplementedError(f'tebd_step not implemented for mode {mode}')
     # Compute error
     error = -float("inf")
-    if log_error:
+    if debug_logger.log_local_tebd_update_errors or debug_logger.log_approximate_column_error_tebd:
         error = _compute_error_1(T1, T2, W, T1_prime, T2_prime, W_prime, U)
 
     # ungroup legs again
@@ -720,7 +721,7 @@ def tebd_step_iterate_polar_2(T1, T2, Wm1, W, Wp1, U, N_iters):
 
     return T1_prime, T2_prime, Wm1_prime, W_prime, Wp1_prime
 
-def tebd_step_2(T1, T2, Wm1, W, Wp1, U, chi_max, mode="svd", log_error=False, **kwargs):
+def tebd_step_2(T1, T2, Wm1, W, Wp1, U, chi_max, mode="svd", debug_logger=debug_logging.DebugLogger(), **kwargs):
     """
     Performs a single TEBD step by approximating the updated tensors of the two site wavefunction, after the time evolution operator
     U has been applied. the bond dimension of all tensors is kept the same.
@@ -743,9 +744,8 @@ def tebd_step_2(T1, T2, Wm1, W, Wp1, U, chi_max, mode="svd", log_error=False, **
         selecting the tebd_step implementation that is called. Depending on the implementation,
         additional parameters may be needed, that get passed on through kwargs. See individual
         tebd_step implementations for more detail.
-    log_error: bool, optional
-        If set to true, the relative error of the TEBD step norm(contr_before - contr_after) / norm(contr_before) is 
-        additionally computed and returned.
+    debug_logger : DebugLogger instance, optional
+        DebugLogger instance managing debug logging. See 'src/utility/debug_logging.py' for more details.
     **kwargs:
         keyword arguments get passed on to the selected tebd_step implementation.
 
@@ -762,7 +762,8 @@ def tebd_step_2(T1, T2, Wm1, W, Wp1, U, chi_max, mode="svd", log_error=False, **
     Wp1_prime : backend.array_type of shape (lp1, up1, rp1, dp1') = (lp1, up1, lu2, u') or None
         part of the updated two-site wavefunction
     error : float
-        error of applying the time evolution operator, or -float("inf") if log_error is set to false.                           
+        error of applying the time evolution operator, or -float("inf") if debug_logger.log_local_tebd_update_errors and
+        debug_logger.log_approximate_column_error_tebd are set to false.                     
     """
     if mode == "svd":
         raise NotImplementedError()
@@ -772,7 +773,7 @@ def tebd_step_2(T1, T2, Wm1, W, Wp1, U, chi_max, mode="svd", log_error=False, **
         raise NotImplementedError(f'tebd_step not implemented for mode {mode}')
     # Compute error
     error = -float("inf")
-    if log_error:
+    if debug_logger.log_local_tebd_update_errors or debug_logger.log_approximate_column_error_tebd:
         error = _compute_error_2(T1, T2, Wm1, W, Wp1, T1_prime, T2_prime, Wm1_prime, W_prime, Wp1_prime, U)
 
     return T1_prime, T2_prime, Wm1_prime, W_prime, Wp1_prime, error
