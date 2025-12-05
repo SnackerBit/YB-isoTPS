@@ -297,6 +297,7 @@ class RenyiAlphaIterateApproxTRM(RenyiAlphaIterate):
             XX, self.S, self.Y = backend.svd(self.Y, full_matrices=False) # { D^5 }
             self.X = self.X@XX
             self.Y = backend.conj(self.Y.T)
+        self.S /= backend.norm(self.S) # DEBUG
         # Cache helper variables
         self.S2alpha = backend.sum(self.S**(2*self.alpha))
         # Compute and return renyi-alpha entropy

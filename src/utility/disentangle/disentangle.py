@@ -29,43 +29,47 @@ def initialize_disentangle(theta, init_U="polar", N_iters_pre_disentangler=200):
     """
     # Initialize disentangling unitary
     ml, d1, d2, mr = theta.shape
-    if init_U == "identity":
-        U0 = backend.eye(d1*d2)
-    elif init_U == "polar":
-        # Polar initialization taken from [1, 2].
-        if ml >= d1 and mr >= d2:
-            theta = theta.transpose(1, 2, 0, 3).reshape((d1*d2, ml, mr)) # ml, d1, d2, mr -> d1, d2, ml, mr -> (d1, d2), ml, mr { D^6 }
-            psi = theta.copy()
-            if ml > d1:
-                rho = backend.tensordot(psi, psi.conj(), ([0, 2], [0, 2])) # [(d1 d2)] ml [mr]; [(d1 d2)*] ml* [mr*] -> ml ml* { D^8 }
-                p, u = backend.eigh(rho) # { D^6 }
-                # eigenvalues from backend.eigh are in ascending order: Take the d1 largest ones!
-                u = u[:, -d1:]
-                psi = backend.tensordot(psi, u.conj(), ([1], [0])).transpose([0, 2, 1]) # (d1 d2) [ml] mr; [ml*] d1* -> (d1 d2) mr d1* -> (d1 d2) d1* mr { D^7 }
-            if mr > d2:
-                rho = backend.tensordot(psi, psi.conj(), ([0, 1], [0, 1])) # [(d1 d2)] [ml] mr; [(d1 d2)*] [ml*] mr* -> mr mr* { D^8 }
-                p, u = backend.eigh(rho) # { D^6 }
-                # eigenvalues from backend.eigh are in ascending order: Take the d2 largest ones!
-                u = u[:, -d2:]
-                psi = backend.tensordot(psi, u.conj(), ([2], [0])) # (d1 d2) ml [mr]; [mr*] d2* -> (d1 d2) ml d2* { D^7 }
-            # Renormalize
-            psi /= backend.norm(psi)
-            # Isometrize using polar decomposition
-            u, s, v = utility.safe_svd(psi.reshape(d1*d2, d1*d2), full_matrices=False)
-            Zp = backend.dot(u, v)
-            U0 = Zp.T.conj()
-            theta = backend.dot(U0, theta.reshape(d1*d2, ml*mr))
-            theta = theta.reshape(d1, d2, ml, mr).transpose(2, 0, 1, 3) # (d1, d2), (ml, mr) -> d1, d2, ml, mr ->  ml, d1, d2, mr { D^6 }
-        else:
+    if isinstance(init_U, str):
+        if init_U == "identity":
             U0 = backend.eye(d1*d2)
-    elif init_U == "qr":
-        U0, theta = utility.split_matrix_svd(theta.transpose(1, 2, 0, 3).reshape((d1*d2, ml*mr)), d1*d2) # ml, d1, d2, mr -> d1, d2, ml, mr -> (d1, d2), (ml, mr) { D^6 }
-        U0 = U0.T.conj()
-        theta = theta.reshape(d1, d2, ml, mr).transpose(2, 0, 1, 3) # (d1, d2), (ml, mr) -> d1, d2, ml, mr -> ml, d1, d2, mr
-    elif init_U == "random":
-        raise NotImplementedError("init_U == random is not implemented")
+        elif init_U == "polar":
+            # Polar initialization taken from [1, 2].
+            if ml >= d1 and mr >= d2:
+                theta = theta.transpose(1, 2, 0, 3).reshape((d1*d2, ml, mr)) # ml, d1, d2, mr -> d1, d2, ml, mr -> (d1, d2), ml, mr { D^6 }
+                psi = theta.copy()
+                if ml > d1:
+                    rho = backend.tensordot(psi, psi.conj(), ([0, 2], [0, 2])) # [(d1 d2)] ml [mr]; [(d1 d2)*] ml* [mr*] -> ml ml* { D^8 }
+                    p, u = backend.eigh(rho) # { D^6 }
+                    # eigenvalues from backend.eigh are in ascending order: Take the d1 largest ones!
+                    u = u[:, -d1:]
+                    psi = backend.tensordot(psi, u.conj(), ([1], [0])).transpose([0, 2, 1]) # (d1 d2) [ml] mr; [ml*] d1* -> (d1 d2) mr d1* -> (d1 d2) d1* mr { D^7 }
+                if mr > d2:
+                    rho = backend.tensordot(psi, psi.conj(), ([0, 1], [0, 1])) # [(d1 d2)] [ml] mr; [(d1 d2)*] [ml*] mr* -> mr mr* { D^8 }
+                    p, u = backend.eigh(rho) # { D^6 }
+                    # eigenvalues from backend.eigh are in ascending order: Take the d2 largest ones!
+                    u = u[:, -d2:]
+                    psi = backend.tensordot(psi, u.conj(), ([2], [0])) # (d1 d2) ml [mr]; [mr*] d2* -> (d1 d2) ml d2* { D^7 }
+                # Renormalize
+                psi /= backend.norm(psi)
+                # Isometrize using polar decomposition
+                u, s, v = utility.safe_svd(psi.reshape(d1*d2, d1*d2), full_matrices=False)
+                Zp = backend.dot(u, v)
+                U0 = Zp.T.conj()
+                theta = backend.dot(U0, theta.reshape(d1*d2, ml*mr))
+                theta = theta.reshape(d1, d2, ml, mr).transpose(2, 0, 1, 3) # (d1, d2), (ml, mr) -> d1, d2, ml, mr ->  ml, d1, d2, mr { D^6 }
+            else:
+                U0 = backend.eye(d1*d2)
+        elif init_U == "qr":
+            U0, theta = utility.split_matrix_svd(theta.transpose(1, 2, 0, 3).reshape((d1*d2, ml*mr)), d1*d2) # ml, d1, d2, mr -> d1, d2, ml, mr -> (d1, d2), (ml, mr) { D^6 }
+            U0 = U0.T.conj()
+            theta = theta.reshape(d1, d2, ml, mr).transpose(2, 0, 1, 3) # (d1, d2), (ml, mr) -> d1, d2, ml, mr -> ml, d1, d2, mr
+        elif init_U == "random":
+            raise NotImplementedError("init_U == random is not implemented")
+        else:
+            raise NotImplementedError(f"init_U == \"{init_U}\" is not implemented!")
     else:
-        raise NotImplementedError(f"init_U == \"{init_U}\" is not implemented!")
+        U0 = init_U.reshape(d1*d2, d1*d2)
+        theta = backend.dot(U0, theta.transpose(1, 2, 0, 3).reshape(d1*d2, ml*mr)).reshape(d1, d2, ml, mr).transpose(2, 0, 1, 3)
 
     # Perform initial disentangling using the fast renyi-2 disentangler
     if N_iters_pre_disentangler > 0:

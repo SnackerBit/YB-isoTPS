@@ -1,5 +1,6 @@
 from .. import backend
 import numpy as np
+import time
 
 """
 This file implements the Trust Region method for the optimization on Riemannian manifolds. It uses truncated Conjugate Gradients (tCG)
@@ -239,6 +240,7 @@ class TrustRegionOptimizer:
             costs = [cost]
             Deltas = [Delta]
             N_iters_tCG_list = []
+            times = [0.0]
         if log_iterates:
             iterates = [initial_iterate.get_iterate()]
         # relative cost diff of this and last iteration (stopping criterion)
@@ -249,6 +251,8 @@ class TrustRegionOptimizer:
             consecutive_Delta_changes_minus = 0
         # Start the TRM main loop
         n = 0
+        if log_debug_info:
+            start = time.time()
         for _ in range(self.N_iters):
             n += 1
             # Approximately solve trust-region subproblem
@@ -269,7 +273,7 @@ class TrustRegionOptimizer:
             rho_numerator += rho_reg
             rho_denominator += rho_reg
             # Check if the model decreased, which can happen due to numerical errors
-            model_decreased = rho_denominator >= 0
+            model_decreased = rho_numerator >= 0
             
             # Compute rho
             try:
@@ -322,6 +326,8 @@ class TrustRegionOptimizer:
             if log_debug_info:
                 costs.append(cost)
                 Deltas.append(Delta)
+                end = time.time()
+                times.append(end-start)
             if log_iterates:
                 iterates.append(iterate.get_iterate())
             
@@ -329,4 +335,4 @@ class TrustRegionOptimizer:
             if gradient_norm < self.min_gradient_norm or Delta < self.min_Delta or (relative_cost_diff is not None and backend.abs(relative_cost_diff) < self.min_relative_cost_diff):
                 break
 
-        return iterate.get_iterate(), n, (costs, Deltas, N_iters_tCG_list, iterates)
+        return iterate.get_iterate(), n, (costs, Deltas, N_iters_tCG_list, times, iterates)

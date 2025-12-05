@@ -133,8 +133,9 @@ def disentangle_TRM(theta, chi, debug_logger=debug_logging.DebugLogger(), **kwar
         debug_logger.append_to_log_list(("disentangler_info", "costs"), debug_info[0])
         debug_logger.append_to_log_list(("disentangler_info", "deltas"), debug_info[1])
         debug_logger.append_to_log_list(("disentangler_info", "N_iters_tCG"), debug_info[2])
+        debug_logger.append_to_log_list(("disentangler_info", "times"), debug_info[3])
     if debug_logger.disentangling_log_iterates:
-        debug_logger.append_to_log_list(("disentangler_info", "iterates"), debug_info[3])
+        debug_logger.append_to_log_list(("disentangler_info", "iterates"), debug_info[4])
     return iterate
 
 def disentangle_approx_TRM(theta, chi, chi_max=None, N_iters_svd=2, eps_svd=0.0, N_iters_svd_initial=50, debug_logger=debug_logging.DebugLogger(), **kwargs):
@@ -190,8 +191,9 @@ def disentangle_approx_TRM(theta, chi, chi_max=None, N_iters_svd=2, eps_svd=0.0,
         debug_logger.append_to_log_list(("disentangler_info", "costs"), debug_info[0])
         debug_logger.append_to_log_list(("disentangler_info", "deltas"), debug_info[1])
         debug_logger.append_to_log_list(("disentangler_info", "N_iters_tCG"), debug_info[2])
+        debug_logger.append_to_log_list(("disentangler_info", "times"), debug_info[3])
     if debug_logger.disentangling_log_iterates:
-        debug_logger.append_to_log_list(("disentangler_info", "iterates"), debug_info[3])
+        debug_logger.append_to_log_list(("disentangler_info", "iterates"), debug_info[4])
     return iterate
 
 def disentangle(theta, chi, method="trm", debug_logger=debug_logging.DebugLogger(), **kwargs):
